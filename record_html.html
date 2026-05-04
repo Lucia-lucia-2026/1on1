@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>원온원 기록 관리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f9;min-height:100vh;color:#111;}
+
+.pw-screen{position:fixed;inset:0;background:#2D7CD2;display:flex;align-items:center;justify-content:center;z-index:200;}
+.pw-box{background:#fff;border-radius:20px;padding:2.5rem 2rem;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.15);}
+.pw-box .icon{font-size:40px;margin-bottom:12px;}
+.pw-box h2{font-size:18px;font-weight:700;margin-bottom:6px;}
+.pw-box p{font-size:13px;color:#888;margin-bottom:1.25rem;line-height:1.6;}
+.pw-box input{width:100%;padding:11px 14px;border:1px solid #e0e0e0;border-radius:12px;font-size:15px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:10px;}
+.pw-box input:focus{border-color:#2D7CD2;}
+.pw-btn{width:100%;padding:12px;font-size:15px;font-weight:600;border:none;border-radius:12px;background:#2D7CD2;color:#fff;cursor:pointer;}
+.pw-error{font-size:12px;color:#e24b4a;margin-top:6px;min-height:16px;}
+
+.setup-banner{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;font-size:13px;color:#795548;display:none;align-items:flex-start;gap:10px;}
+.setup-banner.show{display:flex;}
+.setup-banner strong{color:#e65100;}
+.setup-input-row{display:flex;gap:8px;margin-top:8px;}
+.setup-input-row input{flex:1;padding:8px 12px;border:1px solid #ffe082;border-radius:8px;font-size:13px;outline:none;}
+.setup-input-row button{padding:8px 14px;background:#2D7CD2;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;}
+
+/* 사이드바 */
+.sidebar{position:fixed;top:0;left:0;width:250px;height:100vh;background:#fff;border-right:1px solid #e8edf3;display:flex;flex-direction:column;overflow:hidden;z-index:10;}
+.sidebar-header{padding:1.25rem 1.25rem 0.75rem;border-bottom:1px solid #f0f0f0;}
+.sidebar-header .brand{font-size:12px;color:#2D7CD2;font-weight:600;margin-bottom:4px;}
+.sidebar-header h2{font-size:16px;font-weight:700;}
+.sidebar-tools{display:flex;gap:6px;padding:0.75rem 1rem;border-bottom:1px solid #f0f0f0;}
+.sidebar-tools input{flex:1;padding:7px 10px;border:1px solid #e8edf3;border-radius:10px;font-size:12px;outline:none;background:#f8fafc;}
+.sidebar-tools input:focus{border-color:#2D7CD2;}
+.add-member-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#2D7CD2;color:#fff;border:none;border-radius:10px;font-size:18px;cursor:pointer;flex-shrink:0;transition:opacity 0.15s;}
+.add-member-btn:hover{opacity:0.85;}
+.member-list{flex:1;overflow-y:auto;}
+.team-section{border-bottom:1px solid #f5f5f5;}
+.team-label{font-size:11px;font-weight:600;color:#aaa;letter-spacing:0.5px;padding:8px 1rem 4px;}
+.member-item{display:flex;align-items:center;gap:8px;padding:7px 1rem;cursor:pointer;transition:background 0.1s;border-left:3px solid transparent;position:relative;}
+.member-item:hover{background:#f5f9ff;}
+.member-item:hover .member-edit-btns{display:flex;}
+.member-item.active{background:#eff6ff;border-left-color:#2D7CD2;}
+.member-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;color:#fff;}
+.member-info{flex:1;min-width:0;}
+.member-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.member-role{font-size:11px;color:#aaa;}
+.member-count{font-size:11px;background:#e8f0fe;color:#2D7CD2;border-radius:100px;padding:1px 7px;font-weight:600;flex-shrink:0;}
+.member-edit-btns{display:none;gap:3px;flex-shrink:0;}
+.member-edit-btns button{width:22px;height:22px;border:none;border-radius:6px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.btn-edit-m{background:#e8f0fe;color:#2D7CD2;}
+.btn-del-m{background:#fce8e8;color:#e24b4a;}
+
+/* 메인 */
+.main{margin-left:250px;padding:2rem;min-height:100vh;}
+.main-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px;}
+.main-header h1{font-size:22px;font-weight:700;}
+.main-header p{font-size:13px;color:#888;margin-top:3px;}
+.btn{padding:9px 18px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:opacity 0.15s;}
+.btn:hover{opacity:0.85;}
+.btn-primary{background:#2D7CD2;color:#fff;}
+.btn-outline{background:#fff;color:#555;border:1px solid #dde3eb;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:1.5rem;}
+.stat-card{background:#fff;border-radius:14px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.stat-num{font-size:26px;font-weight:700;color:#2D7CD2;margin-bottom:2px;}
+.stat-label{font-size:12px;color:#999;}
+
+.records-wrap{display:flex;flex-direction:column;gap:12px;}
+.record-card{background:#fff;border-radius:16px;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);border-left:4px solid #2D7CD2;}
+.record-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.record-date{font-size:14px;font-weight:600;color:#2D7CD2;}
+.record-method{font-size:12px;padding:3px 10px;border-radius:100px;font-weight:500;}
+.m-face{background:#e8f5e9;color:#2e7d32;}
+.m-gather{background:#e3f2fd;color:#1565c0;}
+.record-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.record-field label{font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.3px;display:block;margin-bottom:4px;}
+.record-field p{font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap;}
+.record-field.full{grid-column:1/-1;}
+.record-actions{display:flex;gap:8px;margin-top:1rem;padding-top:1rem;border-top:1px solid #f5f5f5;}
+.del-btn{background:none;border:1px solid #f0c0c0;color:#e24b4a;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;}
+.del-btn:hover{background:#fff0f0;}
+.edit-btn{background:none;border:1px solid #dde3eb;color:#555;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;}
+.edit-btn:hover{background:#f8fafc;}
+
+.empty-state{text-align:center;padding:4rem 1rem;color:#bbb;}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state p{font-size:14px;line-height:1.8;}
+
+/* 모달 공통 */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:2rem;}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:1.5rem;}
+.modal .field{margin-bottom:1.25rem;}
+.modal .field label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:6px;}
+.modal .field input,.modal .field textarea,.modal .field select{width:100%;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:14px;color:#111;outline:none;font-family:inherit;background:#fafafa;}
+.modal .field input:focus,.modal .field textarea:focus,.modal .field select:focus{border-color:#2D7CD2;background:#fff;}
+.modal .field textarea{resize:vertical;min-height:90px;}
+.modal-footer{display:flex;gap:10px;margin-top:1.5rem;}
+.modal-footer .btn{flex:1;padding:12px;}
+
+.loading{display:flex;align-items:center;gap:10px;color:#aaa;font-size:14px;padding:2rem 0;}
+.spinner{width:20px;height:20px;border:2px solid #e0e0e0;border-top-color:#2D7CD2;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 22px;border-radius:100px;font-size:13px;opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- 비밀번호 -->
+<div class="pw-screen" id="pw-screen">
+  <div class="pw-box">
+    <div class="icon">📋</div>
+    <h2>원온원 기록 관리</h2>
+    <p>관리자 비밀번호를 입력해 주세요</p>
+    <input type="password" id="pw-input" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="pw-error" id="pw-error"></div>
+    <button class="pw-btn" onclick="checkPw()">확인</button>
+  </div>
+</div>
+
+<!-- 사이드바 -->
+<div class="sidebar" id="sidebar" style="display:none;">
+  <div class="sidebar-header">
+    <div class="brand">빌리지베이비</div>
+    <h2>원온원 기록</h2>
+  </div>
+  <div class="sidebar-tools">
+    <input type="text" id="search-member" placeholder="이름 검색..." oninput="renderSidebar()">
+    <button class="add-member-btn" onclick="openMemberModal()" title="팀원 추가">＋</button>
+  </div>
+  <div class="member-list" id="member-list"></div>
+</div>
+
+<!-- 메인 -->
+<div class="main" id="main-area" style="display:none;">
+  <div class="setup-banner" id="setup-banner">
+    <div style="font-size:20px;flex-shrink:0;">⚙️</div>
+    <div style="flex:1;">
+      <strong>Google Sheets 연동 설정이 필요해요</strong><br>
+      Apps Script 배포 후 URL을 입력해 주세요.
+      <div class="setup-input-row">
+        <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/..." onkeydown="if(event.key==='Enter')saveApiUrl()">
+        <button onclick="saveApiUrl()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-header">
+    <div>
+      <h1 id="main-title">팀원을 선택해 주세요</h1>
+      <p id="main-sub">왼쪽 목록에서 팀원을 선택하면 원온원 기록을 확인할 수 있어요</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">CSV 내보내기</button>
+      <button class="btn btn-outline btn-sm" onclick="showApiSetup()">API 설정</button>
+      <button class="btn btn-primary" id="add-btn" onclick="openRecordModal()" style="display:none;">+ 기록 추가</button>
+    </div>
+  </div>
+
+  <div class="stat-row" id="stat-row" style="display:none;"></div>
+  <div id="records-area">
+    <div class="empty-state"><div class="icon">👈</div><p>왼쪽에서 팀원을 선택해 주세요</p></div>
+  </div>
+</div>
+
+<!-- 원온원 기록 모달 -->
+<div class="modal-bg" id="modal-record">
+  <div class="modal">
+    <h2 id="record-modal-title">원온원 기록 추가</h2>
+    <input type="hidden" id="edit-id">
+    <div class="field"><label>원온원 일시 *</label><input type="datetime-local" id="f-datetime"></div>
+    <div class="field">
+      <label>원온원 방식</label>
+      <select id="f-method">
+        <option value="대면">🏢 대면</option>
+        <option value="비대면(게더)">💻 비대면(게더)</option>
+      </select>
+    </div>
+    <div class="field"><label>주요 체크사항</label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
+    <div class="field"><label>액션 아이템</label><textarea id="f-action" placeholder="예: 다음 주까지 OO 리포트 작성, 팀 미팅 일정 조율 등"></textarea></div>
+    <div class="field"><label>비고</label><textarea id="f-note" placeholder="기타 메모나 특이사항을 자유롭게 적어주세요" style="min-height:70px;"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeRecordModal()">취소</button>
+      <button class="btn btn-primary" id="save-record-btn" onclick="saveRecord()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀원 추가/수정 모달 -->
+<div class="modal-bg" id="modal-member">
+  <div class="modal" style="max-width:400px;">
+    <h2 id="member-modal-title">팀원 추가</h2>
+    <input type="hidden" id="edit-member-idx">
+    <div class="field">
+      <label>이름 *</label>
+      <input type="text" id="m-name" placeholder="예: 홍길동">
+    </div>
+    <div class="field">
+      <label>역할/직무 *</label>
+      <input type="text" id="m-role" placeholder="예: Marketer, Engineer, MD ...">
+    </div>
+    <div class="field">
+      <label>팀 *</label>
+      <select id="m-team">
+        <option value="Biz Team">Biz Team</option>
+        <option value="Brand">Brand</option>
+        <option value="Commerce">Commerce</option>
+        <option value="M&E">M&E</option>
+        <option value="Product">Product</option>
+        <option value="Etc">Etc</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeMemberModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveMember()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PW = 'admin1234';
+const API_KEY = '1on1_api_url';
+const MEMBERS_KEY = '1on1_members';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyCkdDRoCcYtsdTiPdMPPOIXnpvxswY2Uy_JXzNz5DMzNPPUMav6bo17gvRxJ48-70U/exec';
+
+const DEFAULT_MEMBERS = [
+  {name:'이지현',role:'CX',team:'Biz Team'},
+  {name:'정채영',role:'Finance',team:'Biz Team'},
+  {name:'정혜민',role:'HR',team:'Biz Team'},
+  {name:'박나영',role:'Marketer',team:'Brand'},
+  {name:'안선우',role:'Designer',team:'Brand'},
+  {name:'이서현',role:'MD',team:'Brand'},
+  {name:'이우리',role:'Marketer',team:'Brand'},
+  {name:'임희선',role:'Designer',team:'Brand'},
+  {name:'임희진',role:'MD',team:'Brand'},
+  {name:'이종민',role:'MD',team:'Brand'},
+  {name:'이옥석',role:'CX',team:'Brand'},
+  {name:'김유리',role:'AMD',team:'Commerce'},
+  {name:'김태윤',role:'MD',team:'Commerce'},
+  {name:'이소현',role:'MD',team:'Commerce'},
+  {name:'조수민',role:'MD',team:'Commerce'},
+  {name:'이정윤',role:'CEO',team:'Etc'},
+  {name:'박소영',role:'Marketer',team:'M&E'},
+  {name:'박고은',role:'Marketer',team:'M&E'},
+  {name:'오한나',role:'Editor',team:'M&E'},
+  {name:'홍찬주',role:'Ad Manager',team:'M&E'},
+  {name:'이혜린',role:'Designer',team:'M&E'},
+  {name:'안영주',role:'UX Designer',team:'Product'},
+  {name:'김다은',role:'Engineer',team:'Product'},
+  {name:'문혁은',role:'Engineer',team:'Product'},
+  {name:'유진수',role:'Engineer',team:'Product'},
+  {name:'임소정',role:'Engineer',team:'Product'},
+  {name:'정수형',role:'Engineer',team:'Product'},
+  {name:'최제혁',role:'Engineer',team:'Product'},
+  {name:'윤진한',role:'PO',team:'Product'},
+  {name:'윤혜준',role:'Staff-QA',team:'Product'},
+];
+
+const TEAM_ORDER = ['Biz Team','Brand','Commerce','M&E','Product','Etc'];
+const AVATAR_COLORS = ['#2D7CD2','#7f77dd','#e87a5d','#4caf8a','#e6a817','#9c6dd8'];
+
+let selectedMember = null;
+let allRecords = [];
+
+/* ── 팀원 목록 (localStorage) ── */
+function getMembers() {
+  const stored = localStorage.getItem(MEMBERS_KEY);
+  if (stored) return JSON.parse(stored);
+  // 최초 진입 시 기본 목록 저장
+  localStorage.setItem(MEMBERS_KEY, JSON.stringify(DEFAULT_MEMBERS));
+  return DEFAULT_MEMBERS;
+}
+function saveMembers(list) {
+  localStorage.setItem(MEMBERS_KEY, JSON.stringify(list));
+}
+
+/* ── 유틸 ── */
+function avatarColor(name){let h=0;for(let c of name)h=(h*31+c.charCodeAt(0))%AVATAR_COLORS.length;return AVATAR_COLORS[h];}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+function getApiUrl(){const s=localStorage.getItem(API_KEY);return(s&&s.trim().length>0)?s:DEFAULT_API_URL;}
+
+/* ── 비밀번호 ── */
+function checkPw(){
+  if(document.getElementById('pw-input').value===PW){
+    document.getElementById('pw-screen').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main-area').style.display='block';
+    renderSidebar();
+    renderMain();
+    loadAllFromSheet();
+  } else {
+    document.getElementById('pw-error').textContent='비밀번호가 올바르지 않습니다.';
+  }
+}
+
+/* ── API 설정 ── */
+function showApiSetup(){
+  const b=document.getElementById('setup-banner');
+  b.classList.add('show');
+  document.getElementById('api-url-input').value=getApiUrl();
+}
+function saveApiUrl(){
+  const url=document.getElementById('api-url-input').value.trim();
+  if(!url){showToast('⚠️ URL을 입력해 주세요');return;}
+  localStorage.setItem(API_KEY,url);
+  document.getElementById('setup-banner').classList.remove('show');
+  showToast('✅ 저장됐어요. 데이터를 불러옵니다...');
+  loadAllFromSheet();
+}
+
+/* ── API 호출 (JSONP + Base64) ── */
+function api(params){
+  return new Promise((resolve)=>{
+    const url=getApiUrl();
+    if(!url||url.trim()===''){showToast('❌ API URL이 설정되지 않았습니다.');resolve(null);return;}
+    const encoded={...params};
+    if(encoded.record){
+      try{encoded.record=btoa(unescape(encodeURIComponent(encoded.record)));}
+      catch(e){showToast('❌ 데이터 인코딩 실패');resolve(null);return;}
+    }
+    const cbName='cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
+    const qs=new URLSearchParams({...encoded,callback:cbName}).toString();
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();showToast('❌ 서버 연결 시간 초과.');resolve(null);},20000);
+    function cleanup(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);clearTimeout(timer);}
+    window[cbName]=function(data){cleanup();resolve(data);};
+    script.onerror=()=>{cleanup();showToast('❌ 서버 연결 실패.');resolve(null);};
+    script.src=`${url}?${qs}`;
+    document.head.appendChild(script);
+  });
+}
+
+async function loadAllFromSheet(){
+  const data=await api({action:'getAll'});
+  if(data&&data.records){
+    allRecords=data.records;
+    renderSidebar();
+    renderMain();
+  }
+}
+
+function getMemberRecords(name){return allRecords.filter(r=>r.name===name);}
+
+/* ── 사이드바 ── */
+function renderSidebar(){
+  const q=document.getElementById('search-member').value.trim();
+  const members=getMembers();
+  const list=document.getElementById('member-list');
+  list.innerHTML='';
+
+  TEAM_ORDER.forEach(team=>{
+    const filtered=members.filter((m,i)=>m.team===team&&(!q||m.name.includes(q)||m.role.includes(q)));
+    if(!filtered.length)return;
+    const sec=document.createElement('div');
+    sec.className='team-section';
+    sec.innerHTML=`<div class="team-label">${team}</div>`;
+    filtered.forEach(m=>{
+      const globalIdx=members.findIndex(x=>x.name===m.name&&x.team===m.team);
+      const cnt=getMemberRecords(m.name).length;
+      const div=document.createElement('div');
+      div.className='member-item'+(selectedMember===m.name?' active':'');
+      div.innerHTML=`
+        <div class="member-avatar" style="background:${avatarColor(m.name)}">${m.name[0]}</div>
+        <div class="member-info"><div class="member-name">${m.name}</div><div class="member-role">${m.role}</div></div>
+        ${cnt?`<span class="member-count">${cnt}</span>`:''}
+        <div class="member-edit-btns">
+          <button class="btn-edit-m" onclick="editMember(event,${globalIdx})" title="수정">✏️</button>
+          <button class="btn-del-m" onclick="deleteMember(event,${globalIdx},'${m.name}')" title="삭제">✕</button>
+        </div>`;
+      div.onclick=()=>{selectedMember=m.name;renderSidebar();renderMain();};
+      sec.appendChild(div);
+    });
+    list.appendChild(sec);
+  });
+}
+
+/* ── 팀원 모달 ── */
+function openMemberModal(idx){
+  document.getElementById('member-modal-title').textContent = idx!==undefined ? '팀원 수정' : '팀원 추가';
+  document.getElementById('edit-member-idx').value = idx!==undefined ? idx : '';
+  if(idx!==undefined){
+    const m=getMembers()[idx];
+    document.getElementById('m-name').value=m.name;
+    document.getElementById('m-role').value=m.role;
+    document.getElementById('m-team').value=m.team;
+  } else {
+    document.getElementById('m-name').value='';
+    document.getElementById('m-role').value='';
+    document.getElementById('m-team').value='Biz Team';
+  }
+  document.getElementById('modal-member').classList.add('open');
+}
+function closeMemberModal(){document.getElementById('modal-member').classList.remove('open');}
+
+function editMember(e, idx){
+  e.stopPropagation();
+  openMemberModal(idx);
+}
+
+function deleteMember(e, idx, name){
+  e.stopPropagation();
+  const hasCnt = getMemberRecords(name).length;
+  const msg = hasCnt
+    ? `${name} 님을 삭제하면 관련 원온원 기록 ${hasCnt}건도 함께 삭제됩니다. 계속하시겠어요?`
+    : `${name} 님을 목록에서 삭제할까요?`;
+  if(!confirm(msg)) return;
+  const members=getMembers();
+  members.splice(idx,1);
+  saveMembers(members);
+  if(selectedMember===name){selectedMember=null;}
+  renderSidebar();
+  renderMain();
+  showToast(`🗑️ ${name} 님이 삭제되었습니다`);
+}
+
+function saveMember(){
+  const name=document.getElementById('m-name').value.trim();
+  const role=document.getElementById('m-role').value.trim();
+  const team=document.getElementById('m-team').value;
+  if(!name){showToast('⚠️ 이름을 입력해 주세요');return;}
+  if(!role){showToast('⚠️ 역할/직무를 입력해 주세요');return;}
+
+  const members=getMembers();
+  const idxStr=document.getElementById('edit-member-idx').value;
+
+  if(idxStr!==''){
+    // 수정
+    const idx=parseInt(idxStr);
+    const oldName=members[idx].name;
+    members[idx]={name,role,team};
+    // 기록의 이름도 업데이트
+    if(oldName!==name){
+      allRecords=allRecords.map(r=>r.name===oldName?{...r,name,team,role}:r);
+    }
+    showToast(`✅ ${name} 님 정보가 수정되었습니다`);
+    if(selectedMember===oldName) selectedMember=name;
+  } else {
+    // 추가 — 중복 체크
+    if(members.find(m=>m.name===name&&m.team===team)){
+      showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;
+    }
+    members.push({name,role,team});
+    showToast(`✅ ${name} 님이 추가되었습니다`);
+  }
+
+  saveMembers(members);
+  closeMemberModal();
+  renderSidebar();
+  renderMain();
+}
+
+/* ── 메인 ── */
+function renderMain(){
+  const titleEl=document.getElementById('main-title');
+  const subEl=document.getElementById('main-sub');
+  const addBtn=document.getElementById('add-btn');
+  const statRow=document.getElementById('stat-row');
+  const area=document.getElementById('records-area');
+
+  if(!selectedMember){
+    titleEl.textContent='팀원을 선택해 주세요';
+    subEl.textContent='왼쪽 목록에서 팀원을 선택하면 원온원 기록을 확인할 수 있어요';
+    addBtn.style.display='none';statRow.style.display='none';
+    area.innerHTML=`<div class="empty-state"><div class="icon">👈</div><p>왼쪽에서 팀원을 선택해 주세요</p></div>`;
+    return;
+  }
+  const member=getMembers().find(m=>m.name===selectedMember);
+  const records=getMemberRecords(selectedMember).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+  titleEl.textContent=`${selectedMember} 님의 원온원 기록`;
+  subEl.textContent=`${member?.role||''} · ${member?.team||''}`;
+  addBtn.style.display='inline-block';statRow.style.display='grid';
+
+  const face=records.filter(r=>r.method==='대면').length;
+  const gather=records.filter(r=>r.method==='비대면(게더)').length;
+  const last=records[0]?new Date(records[0].datetime).toLocaleDateString('ko-KR'):'—';
+  statRow.innerHTML=`
+    <div class="stat-card"><div class="stat-num">${records.length}</div><div class="stat-label">총 원온원 횟수</div></div>
+    <div class="stat-card"><div class="stat-num">${face}</div><div class="stat-label">대면</div></div>
+    <div class="stat-card"><div class="stat-num">${gather}</div><div class="stat-label">비대면(게더)</div></div>
+    <div class="stat-card"><div class="stat-num" style="font-size:16px;padding-top:4px;">${last}</div><div class="stat-label">마지막 원온원</div></div>`;
+
+  if(!records.length){
+    area.innerHTML=`<div class="empty-state"><div class="icon">📝</div><p>${selectedMember} 님의 원온원 기록이 없어요.<br><strong>+ 기록 추가</strong>로 첫 기록을 남겨보세요!</p></div>`;
+    return;
+  }
+  area.innerHTML=`<div class="records-wrap">${records.map(r=>cardHTML(r)).join('')}</div>`;
+}
+
+function cardHTML(r){
+  const dt=r.datetime?new Date(r.datetime).toLocaleString('ko-KR',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  const mc=r.method==='대면'?'m-face':'m-gather';
+  return `<div class="record-card">
+    <div class="record-card-header">
+      <span class="record-date">📅 ${dt}</span>
+      <span class="record-method ${mc}">${r.method||'—'}</span>
+    </div>
+    <div class="record-body">
+      <div class="record-field full"><label>✅ 주요 체크사항</label><p>${r.check?esc(r.check):'<span style="color:#ccc">—</span>'}</p></div>
+      <div class="record-field full"><label>🎯 액션 아이템</label><p>${r.action?esc(r.action):'<span style="color:#ccc">—</span>'}</p></div>
+      <div class="record-field full"><label>📌 비고</label><p>${r.note?esc(r.note):'<span style="color:#ccc">—</span>'}</p></div>
+    </div>
+    <div class="record-actions">
+      <button class="edit-btn" onclick='openRecordModal(${JSON.stringify(r.id)})'>수정</button>
+      <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.id)})'>삭제</button>
+    </div>
+  </div>`;
+}
+
+/* ── 기록 모달 ── */
+function openRecordModal(id){
+  document.getElementById('record-modal-title').textContent=id?'기록 수정':'원온원 기록 추가';
+  document.getElementById('edit-id').value=id||'';
+  if(id){
+    const r=allRecords.find(r=>String(r.id)===String(id));
+    if(r){
+      document.getElementById('f-datetime').value=r.datetime||'';
+      document.getElementById('f-method').value=r.method||'대면';
+      document.getElementById('f-check').value=r.check||'';
+      document.getElementById('f-action').value=r.action||'';
+      document.getElementById('f-note').value=r.note||'';
+    }
+  } else {
+    ['f-check','f-action','f-note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-datetime').value='';
+    document.getElementById('f-method').value='대면';
+  }
+  document.getElementById('modal-record').classList.add('open');
+}
+function closeRecordModal(){document.getElementById('modal-record').classList.remove('open');}
+
+async function saveRecord(){
+  const dt=document.getElementById('f-datetime').value;
+  if(!dt){showToast('⚠️ 원온원 일시를 입력해 주세요');return;}
+  const saveBtn=document.getElementById('save-record-btn');
+  saveBtn.textContent='저장 중...';saveBtn.disabled=true;
+
+  const member=getMembers().find(m=>m.name===selectedMember);
+  const editId=document.getElementById('edit-id').value;
+  const record={
+    id:editId||'',
+    name:selectedMember,team:member?.team||'',role:member?.role||'',
+    datetime:dt,
+    method:document.getElementById('f-method').value,
+    check:document.getElementById('f-check').value.trim(),
+    action:document.getElementById('f-action').value.trim(),
+    note:document.getElementById('f-note').value.trim(),
+    updatedAt:new Date().toLocaleString('ko-KR')
+  };
+
+  const res=await api({action:'save',record:JSON.stringify(record)});
+  saveBtn.textContent='저장하기';saveBtn.disabled=false;
+  if(res&&res.success){
+    closeRecordModal();
+    await loadAllFromSheet();
+    showToast('✅ 기록이 저장되었습니다!');
+  } else {
+    showToast('❌ 저장 실패. 다시 시도해 주세요.');
+  }
+}
+
+async function deleteRecord(id){
+  if(!confirm('이 기록을 삭제할까요?'))return;
+  const res=await api({action:'delete',id:String(id)});
+  if(res&&res.success){await loadAllFromSheet();showToast('🗑️ 삭제되었습니다');}
+  else showToast('❌ 삭제 실패. 다시 시도해 주세요.');
+}
+
+/* ── CSV ── */
+function exportCSV(){
+  if(!allRecords.length){showToast('⚠️ 내보낼 기록이 없습니다');return;}
+  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각']];
+  allRecords.forEach(r=>{
+    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt]
+      .map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
+  });
+  const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`1on1_records_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+document.getElementById('modal-record').addEventListener('click',function(e){if(e.target===this)closeRecordModal();});
+document.getElementById('modal-member').addEventListener('click',function(e){if(e.target===this)closeMemberModal();});
+</script>
+</body>
+</html>

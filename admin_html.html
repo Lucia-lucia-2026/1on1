@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>원온원 관리자 페이지</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f5f5f0;min-height:100vh;padding:2rem 1.5rem;}
+  h1{font-size:20px;font-weight:600;color:#111;margin-bottom:4px;}
+  .sub{font-size:13px;color:#888;margin-bottom:1.75rem;}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:1.75rem;}
+  .stat{background:#fff;border-radius:14px;padding:1.1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .stat-num{font-size:26px;font-weight:700;color:#7f77dd;margin-bottom:2px;}
+  .stat-label{font-size:12px;color:#999;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1.25rem;}
+  select,input[type=text]{padding:8px 12px;border:1px solid #e0e0e0;border-radius:10px;font-size:13px;color:#333;background:#fff;outline:none;}
+  select:focus,input[type=text]:focus{border-color:#7f77dd;}
+  .btn{padding:8px 18px;border-radius:10px;font-size:13px;cursor:pointer;border:none;font-weight:500;transition:opacity 0.15s;}
+  .btn:hover{opacity:0.85;}
+  .btn-primary{background:#7f77dd;color:#fff;}
+  .btn-outline{background:#fff;color:#555;border:1px solid #e0e0e0;}
+  .btn-danger{background:#fff;color:#e24b4a;border:1px solid #f0c0c0;margin-left:auto;}
+  .card{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{background:#fafafa;font-weight:500;color:#888;padding:11px 14px;text-align:left;border-bottom:1px solid #f0f0f0;white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid #f8f8f8;vertical-align:top;color:#333;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#fdfdff;}
+  .badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500;white-space:nowrap;}
+  .b-biz{background:#E6F1FB;color:#185FA5;}
+  .b-product{background:#EAF3DE;color:#3B6D11;}
+  .b-commerce{background:#FAEEDA;color:#854F0B;}
+  .b-marketing{background:#FBEAF0;color:#993556;}
+  .b-brand{background:#EEEDFE;color:#534AB7;}
+  .b-face{background:#e8f5e9;color:#2e7d32;}
+  .b-gather{background:#e3f2fd;color:#1565c0;}
+  .tag-wrap{display:flex;flex-wrap:wrap;gap:4px;}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;background:#f5f5f0;color:#666;white-space:nowrap;}
+  .etc-cell{color:#aaa;font-style:italic;font-size:12px;max-width:160px;}
+  .empty{text-align:center;padding:4rem 0;color:#bbb;font-size:14px;}
+  .del-btn{background:none;border:none;color:#ddd;font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;}
+  .del-btn:hover{color:#e24b4a;background:#fff0f0;}
+  .pw-screen{position:fixed;inset:0;background:#f5f5f0;display:flex;align-items:center;justify-content:center;z-index:100;}
+  .pw-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+  .pw-box h2{font-size:18px;font-weight:600;margin-bottom:6px;}
+  .pw-box p{font-size:13px;color:#888;margin-bottom:1.5rem;}
+  .pw-box input{width:100%;padding:10px 14px;border:1px solid #e0e0e0;border-radius:10px;font-size:15px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px;}
+  .pw-box input:focus{border-color:#7f77dd;}
+  .pw-box .btn-primary{width:100%;padding:12px;}
+  .pw-error{font-size:12px;color:#e24b4a;margin-top:4px;min-height:18px;}
+  @media(max-width:700px){
+    table,thead,tbody,th,td,tr{display:block;}
+    thead{display:none;}
+    td{padding:6px 14px;}
+    td::before{content:attr(data-label);font-size:11px;color:#aaa;display:block;margin-bottom:2px;}
+    tr{border-bottom:1px solid #f0f0f0;padding:10px 0;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 비밀번호 화면 -->
+<div class="pw-screen" id="pw-screen">
+  <div class="pw-box">
+    <h2>관리자 확인</h2>
+    <p>관리자 비밀번호를 입력해 주세요</p>
+    <input type="password" id="pw-input" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')checkPw()">
+    <div class="pw-error" id="pw-error"></div>
+    <button class="btn btn-primary" onclick="checkPw()">확인</button>
+  </div>
+</div>
+
+<h1>원온원 관리자 페이지</h1>
+<p class="sub">빌리지베이비 · 응답 현황 확인 및 관리</p>
+
+<div class="stat-grid" id="stat-grid"></div>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="이름 검색..." oninput="render()" style="width:140px;">
+  <select id="f-team" onchange="render()">
+    <option value="">전체 팀</option>
+    <option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마케팅팀</option><option>브랜드팀</option>
+  </select>
+  <select id="f-method" onchange="render()">
+    <option value="">전체 방식</option>
+    <option>대면</option><option>비대면(게더)</option>
+  </select>
+  <button class="btn btn-primary" onclick="exportCSV()">CSV 내보내기</button>
+  <button class="btn btn-danger" onclick="clearAll()">전체 삭제</button>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>이름</th><th>팀</th><th>희망 날짜</th><th>희망 시간대</th><th>방식</th><th>기타</th><th>제출 시각</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<p style="font-size:12px;color:#ccc;margin-top:1rem;text-align:right;">데이터는 이 브라우저의 localStorage에 저장됩니다. 다른 브라우저에서 공유하려면 CSV 내보내기를 활용하세요.</p>
+
+<script>
+const STORAGE_KEY = '1on1_responses';
+const PW = 'admin1234'; // ← 비밀번호를 여기서 변경하세요
+
+const TEAM_CLASS = {
+  'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','브랜드팀':'b-brand'
+};
+
+function checkPw() {
+  const v = document.getElementById('pw-input').value;
+  if (v === PW) {
+    document.getElementById('pw-screen').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('pw-error').textContent = '비밀번호가 올바르지 않습니다.';
+  }
+}
+
+function load() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+}
+function save(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function init() {
+  renderStats();
+  render();
+}
+
+function renderStats() {
+  const data = load();
+  const teams = ['Biz팀','프로덕트팀','커머스팀','마케팅팀','브랜드팀'];
+  const face = data.filter(r => r.method === '대면').length;
+  const gather = data.filter(r => r.method === '비대면(게더)').length;
+  const teamCounts = teams.map(t => data.filter(r => r.team === t).length);
+  let html = `
+    <div class="stat"><div class="stat-num">${data.length}</div><div class="stat-label">전체 응답</div></div>
+    <div class="stat"><div class="stat-num">${face}</div><div class="stat-label">대면 희망</div></div>
+    <div class="stat"><div class="stat-num">${gather}</div><div class="stat-label">비대면 희망</div></div>
+  `;
+  teams.forEach((t, i) => {
+    html += `<div class="stat"><div class="stat-num" style="font-size:20px;">${teamCounts[i]}</div><div class="stat-label">${t}</div></div>`;
+  });
+  document.getElementById('stat-grid').innerHTML = html;
+}
+
+function render() {
+  const data = load();
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const ft = document.getElementById('f-team').value;
+  const fm = document.getElementById('f-method').value;
+
+  const filtered = data.filter(r => {
+    if (q && !r.name.toLowerCase().includes(q)) return false;
+    if (ft && r.team !== ft) return false;
+    if (fm && r.method !== fm) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">응답이 없습니다.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    const mc = r.method === '대면' ? 'b-face' : 'b-gather';
+    const dates = (r.dates || []).map(d => `<span class="tag">${d}</span>`).join('');
+    const times = (r.times || []).map(t => `<span class="tag">${t}</span>`).join('');
+    return `<tr>
+      <td data-label="이름"><strong>${r.name}</strong></td>
+      <td data-label="팀"><span class="badge ${TEAM_CLASS[r.team]||''}">${r.team}</span></td>
+      <td data-label="희망 날짜"><div class="tag-wrap">${dates}</div></td>
+      <td data-label="희망 시간대"><div class="tag-wrap">${times}</div></td>
+      <td data-label="방식"><span class="badge ${mc}">${r.method}</span></td>
+      <td data-label="기타" class="etc-cell">${r.etc || '—'}</td>
+      <td data-label="제출 시각" style="color:#bbb;font-size:12px;white-space:nowrap;">${r.ts}</td>
+      <td><button class="del-btn" onclick="deleteRow(${r.id})" title="삭제">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteRow(id) {
+  if (!confirm('이 응답을 삭제할까요?')) return;
+  save(load().filter(r => r.id !== id));
+  renderStats();
+  render();
+}
+
+function clearAll() {
+  if (!confirm('모든 응답을 삭제할까요? 복구할 수 없습니다.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  renderStats();
+  render();
+}
+
+function exportCSV() {
+  const data = load();
+  if (!data.length) { alert('내보낼 데이터가 없습니다.'); return; }
+  const header = ['이름','팀','희망날짜','희망시간대','방식','기타','제출시각'];
+  const rows = data.map(r => [
+    r.name, r.team,
+    (r.dates||[]).join(' / '),
+    (r.times||[]).join(' / '),
+    r.method, r.etc, r.ts
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`));
+  const csv = '\uFEFF' + [header, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `1on1_responses_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
