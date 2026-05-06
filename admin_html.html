@@ -159,7 +159,18 @@ tr:hover td{background:#fdfdff;}
 <script>
 const PW = 'admin1234';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
-const TEAM_CLASS = {'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','마에팅팀':'b-me','브랜드팀':'b-brand'};
+const TEAM_CLASS = {
+  'Biz팀':'b-biz',
+  '프로덕트팀':'b-product',
+  '커머스팀':'b-commerce',
+  '마케팅팀':'b-marketing',
+  '마에팅팀':'b-me',
+  '브랜드팀':'b-brand'
+};
+
+function getTeamClass(team) {
+  return TEAM_CLASS[team] || 'b-me';
+}
 
 let surveys = [];
 let currentId = null;
@@ -230,6 +241,7 @@ function render(){
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="9" class="empty">응답이 없습니다.</td></tr>`;return;}
   tbody.innerHTML=filtered.map(r=>{
     const mc=r.method==='대면'?'b-face':'b-gather';
+    const tc=getTeamClass(r.team);
     const dates=(r.dates||[]).map(d=>`<span class="tag">${d}</span>`).join('');
     const times=(r.times||[]).map(t=>`<span class="tag">${t}</span>`).join('');
     const historyHTML=(r.sendHistory||[]).slice().reverse().map((h,i)=>
@@ -246,7 +258,7 @@ function render(){
       : `<button class="confirm-btn" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}',false)">일정 확정 →</button>`;
     return `<tr>
       <td><strong>${r.name}</strong></td>
-      <td><span class="badge ${TEAM_CLASS[r.team]||''}">${r.team}</span></td>
+      <td><span class="badge ${tc}">${r.team}</span></td>
       <td><div class="tag-wrap">${dates}</div></td>
       <td><div class="tag-wrap">${times}</div></td>
       <td><span class="badge ${mc}">${r.method}</span></td>
