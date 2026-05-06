@@ -165,6 +165,27 @@
 
 <script>
 const STORAGE_KEY = '1on1_responses';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
+
+/* ── API 호출 (JSONP) ── */
+function apiCall(params) {
+  return new Promise(resolve => {
+    const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const enc = {...params};
+    if (enc.survey) {
+      try { enc.survey = btoa(unescape(encodeURIComponent(enc.survey))); }
+      catch(e) { resolve(null); return; }
+    }
+    const qs = new URLSearchParams({...enc, callback: cb}).toString();
+    const s = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); resolve(null); }, 15000);
+    function cleanup() { delete window[cb]; s.parentNode && s.parentNode.removeChild(s); clearTimeout(t); }
+    window[cb] = d => { cleanup(); resolve(d); };
+    s.onerror = () => { cleanup(); resolve(null); };
+    s.src = `${API_URL}?${qs}`;
+    document.head.appendChild(s);
+  });
+}
 const TIMES = ['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'];
 const DAY_KO = ['일','월','화','수','목','금','토'];
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -266,7 +287,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2300);
 }
 
-function submitSurvey() {
+async function submitSurvey() {
   const name = document.getElementById('name').value.trim();
   const team = getRadio('team');
   const dates = [...selectedDates].sort();
@@ -280,12 +301,28 @@ function submitSurvey() {
   if (!times.length) { showToast('😅 희망 시간대를 하나 이상 선택해 주세요!'); return; }
   if (!method) { showToast('😅 원온원 방식을 선택해 주세요!'); return; }
 
-  const responses = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  responses.push({ id: Date.now(), name, team, dates, times, method, etc, ts: new Date().toLocaleString('ko-KR') });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+  // 제출 버튼 비활성화
+  const btn = document.querySelector('.submit-btn');
+  btn.textContent = '제출 중...';
+  btn.disabled = true;
 
-  document.getElementById('form-area').style.display = 'none';
-  document.getElementById('success-card').style.display = 'block';
+  const survey = JSON.stringify({
+    id: Date.now().toString(),
+    name, team, dates, times, method, etc,
+    ts: new Date().toLocaleString('ko-KR')
+  });
+
+  const res = await apiCall({ action: 'saveSurvey', survey });
+
+  btn.textContent = '✉️ 제출하기';
+  btn.disabled = false;
+
+  if (res && res.success) {
+    document.getElementById('form-area').style.display = 'none';
+    document.getElementById('success-card').style.display = 'block';
+  } else {
+    showToast('😅 제출에 실패했어요. 다시 시도해 주세요.');
+  }
 }
 
 function resetForm() {
