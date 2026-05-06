@@ -287,6 +287,7 @@ function openConfirmModal(id, name, method, isResend){
     ? `${name} 님께 수정된 일정을 다시 발송합니다.`
     : `${name} 님께 확정 일정을 이메일로 안내합니다.`;
   document.getElementById('send-btn').textContent = isResend ? '✉️ 수정 + 재발송' : '✉️ 확정 + 이메일 발송';
+  document.getElementById('send-btn').dataset.resend = isResend ? 'true' : '';
   document.getElementById('modal-confirm').classList.add('open');
 }
 function closeConfirmModal(){
@@ -328,7 +329,7 @@ async function sendConfirm(){
   btn.innerHTML='<span class="spinner-inline"></span>발송 중...';
   btn.disabled=true;
 
-  const data=JSON.stringify({name, email, datetime, method, note});
+  const data=JSON.stringify({name, email, datetime, method, note, isResend: !!document.getElementById('send-btn').dataset.resend});
   const res=await apiCall({action:'sendEmail', data});
 
   btn.innerHTML='✉️ 확정 + 이메일 발송';
