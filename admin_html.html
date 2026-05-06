@@ -140,9 +140,15 @@ tr:hover td{background:#fdfdff;}
       </select>
     </div>
     <div class="field"><label>비고 <span style="font-weight:400;color:#bbb;">(선택)</span></label><textarea id="c-note" placeholder="전달할 추가 내용이 있으면 입력해 주세요"></textarea></div>
+    <div style="border-top:1px solid #f0f0f0;margin:1.25rem 0;"></div>
+    <div style="font-size:13px;font-weight:600;color:#444;margin-bottom:10px;">💬 Slack DM 발송 <span style="font-size:11px;color:#bbb;font-weight:400;">(선택)</span></div>
+    <div class="field">
+      <label>Slack User ID <span style="font-weight:400;color:#bbb;font-size:11px;">— Slack 프로필 > 멤버 ID 복사 (Uxxxxxxxx)</span></label>
+      <input type="text" id="c-slack" placeholder="U0XXXXXXXXX">
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeConfirmModal()">취소</button>
-      <button class="btn btn-confirm" id="send-btn" onclick="sendConfirm()">✉️ 확정 + 이메일 발송</button>
+      <button class="btn btn-confirm" id="send-btn" onclick="sendConfirm()">✉️ 확정 + 발송</button>
     </div>
   </div>
 </div>
@@ -262,8 +268,9 @@ function openConfirmModal(id,name,method,isResend){
   document.getElementById('c-datetime').value=isResend?(r?.confirmedDatetime||''):'';
   document.getElementById('c-method').value=isResend?(r?.confirmedMethod||method):method||'대면';
   document.getElementById('c-note').value=isResend?(r?.confirmedNote||''):'';
+  document.getElementById('c-slack').value=isResend?(r?.confirmedSlack||''):'';
   const btn=document.getElementById('send-btn');
-  btn.textContent=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 이메일 발송';
+  btn.textContent=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 발송';
   btn.dataset.resend=isResend?'true':'';
   document.getElementById('modal-confirm').classList.add('open');
 }
@@ -276,6 +283,7 @@ async function sendConfirm(){
   const method=document.getElementById('c-method').value;
   const note=document.getElementById('c-note').value.trim();
   const name=document.getElementById('c-name').value;
+  const slackUserId=document.getElementById('c-slack').value.trim();
   const isResend=!!document.getElementById('send-btn').dataset.resend;
   if(!email){showToast('⚠️ 이메일 주소를 입력해 주세요');return;}
   if(!datetime){showToast('⚠️ 확정 일시를 선택해 주세요');return;}
@@ -289,8 +297,14 @@ async function sendConfirm(){
   const calendarEventId=r?.calendarEventId||null;
   const changeCount = (r?.sendHistory?.length || 0); // 현재까지 발송 횟수 = 이번 변경 횟수
 
-  const data=JSON.stringify({name,email,datetime,method,note,isResend,calendarEventId,changeCount});
+  const data=JSON.stringify({name,email,datetime,method,note,isResend,calendarEventId,changeCount,slackUserId});
   const res=await api({action:'sendEmail',data});
+
+  // Slack DM 별도 발송
+  let slackResult = null;
+  if(slackUserId && res?.success){
+    slackResult=await api({action:'sendSlack',data:JSON.stringify({name,slackUserId,datetime,method,note,isResend,changeCount})});
+  }
 
   btn.innerHTML=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 이메일 발송';
   btn.disabled=false;
@@ -308,13 +322,17 @@ async function sendConfirm(){
       surveys[idx].confirmedDatetime=datetime;
       surveys[idx].confirmedMethod=method;
       surveys[idx].confirmedNote=note;
+      surveys[idx].confirmedSlack=slackUserId;
       if(res.calendarEventId) surveys[idx].calendarEventId=res.calendarEventId;
       // 기존 id 유지하면서 Drive 업데이트 (새 row 생성 방지)
       await api({action:'saveSurvey', survey:JSON.stringify(surveys[idx])});
     }
     closeConfirmModal();
     await loadSurveys();
-    showToast(isResend?'✅ 변경 일정이 재발송되었습니다!':'✅ 이메일 발송 + 캘린더 등록 완료!');
+    const slackMsg = slackUserId
+      ? (slackResult?.success ? ' + Slack DM 발송 완료!' : ' (Slack 발송 실패)')
+      : '';
+    showToast(isResend?`✅ 변경 일정 재발송${slackMsg}`:`✅ 이메일 + 캘린더 등록 완료${slackMsg}`);
   } else {
     showToast('❌ 발송 실패: '+(res?.error||'다시 시도해 주세요'));
   }
