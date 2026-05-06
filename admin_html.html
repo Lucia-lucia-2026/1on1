@@ -287,8 +287,9 @@ async function sendConfirm(){
   // 기존 캘린더 이벤트 ID 전달 (재발송 시 이벤트 수정용)
   const r=surveys.find(r=>String(r.id)===String(currentId));
   const calendarEventId=r?.calendarEventId||null;
+  const changeCount = (r?.sendHistory?.length || 0); // 현재까지 발송 횟수 = 이번 변경 횟수
 
-  const data=JSON.stringify({name,email,datetime,method,note,isResend,calendarEventId});
+  const data=JSON.stringify({name,email,datetime,method,note,isResend,calendarEventId,changeCount});
   const res=await api({action:'sendEmail',data});
 
   btn.innerHTML=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 이메일 발송';
@@ -308,7 +309,7 @@ async function sendConfirm(){
       surveys[idx].confirmedMethod=method;
       surveys[idx].confirmedNote=note;
       if(res.calendarEventId) surveys[idx].calendarEventId=res.calendarEventId;
-      // Drive 저장
+      // 기존 id 유지하면서 Drive 업데이트 (새 row 생성 방지)
       await api({action:'saveSurvey', survey:JSON.stringify(surveys[idx])});
     }
     closeConfirmModal();
