@@ -239,8 +239,12 @@ function render(){
     const dates=(r.dates||[]).map(d=>`<span class="tag">${d}</span>`).join('');
     const times=(r.times||[]).map(t=>`<span class="tag">${t}</span>`).join('');
     const confirmCell = r.confirmed
-      ? `<div class="confirmed-badge">✅ 확정완료</div><div style="font-size:11px;color:#aaa;margin-top:4px;">${r.confirmedAt||''}</div>`
-      : `<button class="confirm-btn" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}')">일정 확정 →</button>`;
+      ? `<div style="display:flex;flex-direction:column;gap:6px;">
+           <div class="confirmed-badge">✅ 확정완료</div>
+           <div style="font-size:11px;color:#aaa;">${r.confirmedAt||''}</div>
+           <button class="confirm-btn" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}',true)">재발송 →</button>
+         </div>`
+      : `<button class="confirm-btn" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}',false)">일정 확정 →</button>`;
     return `<tr>
       <td data-label="이름"><strong>${r.name}</strong></td>
       <td data-label="팀"><span class="badge ${TEAM_CLASS[r.team]||''}">${r.team}</span></td>
@@ -256,14 +260,27 @@ function render(){
 }
 
 /* ── 일정 확정 모달 ── */
-function openConfirmModal(id, name, method){
+function openConfirmModal(id, name, method, isResend){
   currentResponseId = id;
   document.getElementById('c-name').value = name;
-  document.getElementById('c-email').value = '';
-  document.getElementById('c-datetime').value = '';
-  document.getElementById('c-method').value = method || '대면';
-  document.getElementById('c-note').value = '';
-  document.getElementById('confirm-sub').textContent = `${name} 님께 확정 일정을 이메일로 안내합니다.`;
+  // 재발송 시 이전 이메일 자동입력
+  if(isResend){
+    const r=load().find(r=>String(r.id)===String(id));
+    document.getElementById('c-email').value = r?.confirmedEmail||'';
+    document.getElementById('c-datetime').value = r?.confirmedDatetime||'';
+    document.getElementById('c-method').value = r?.confirmedMethod||method||'대면';
+    document.getElementById('c-note').value = r?.confirmedNote||'';
+  } else {
+    document.getElementById('c-email').value = '';
+    document.getElementById('c-datetime').value = '';
+    document.getElementById('c-method').value = method||'대면';
+    document.getElementById('c-note').value = '';
+  }
+  document.getElementById('modal-confirm').querySelector('h2').textContent = isResend ? '📧 일정 재발송' : '📅 원온원 일정 확정';
+  document.getElementById('confirm-sub').textContent = isResend
+    ? `${name} 님께 수정된 일정을 다시 발송합니다.`
+    : `${name} 님께 확정 일정을 이메일로 안내합니다.`;
+  document.getElementById('send-btn').textContent = isResend ? '✉️ 수정 + 재발송' : '✉️ 확정 + 이메일 발송';
   document.getElementById('modal-confirm').classList.add('open');
 }
 function closeConfirmModal(){
@@ -319,6 +336,9 @@ async function sendConfirm(){
       responses[idx].confirmed=true;
       responses[idx].confirmedAt=new Date(datetime).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
       responses[idx].confirmedEmail=email;
+      responses[idx].confirmedDatetime=datetime;
+      responses[idx].confirmedMethod=method;
+      responses[idx].confirmedNote=note;
       save(responses);
     }
     closeConfirmModal();
