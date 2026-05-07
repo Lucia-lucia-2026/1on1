@@ -48,7 +48,18 @@ tr:hover td{background:#fdfdff;}
 .confirmed-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2e7d32;background:#e8f5e9;padding:3px 10px;border-radius:100px;}
 .cal-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#1a73e8;background:#e8f0fe;padding:2px 8px;border-radius:100px;margin-top:3px;}
 
-.pw-screen{position:fixed;inset:0;background:#f5f5f0;display:flex;align-items:center;justify-content:center;z-index:100;}
+/* 설문 발송 모달 */
+.member-check{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f8f8f8;cursor:pointer;transition:background 0.1s;}
+.member-check:hover{background:#f5f9ff;}
+.member-check input[type=checkbox]{width:16px;height:16px;accent-color:#2D7CD2;cursor:pointer;flex-shrink:0;}
+.member-check .m-info{flex:1;}
+.member-check .m-name{font-size:13px;font-weight:500;}
+.member-check .m-team{font-size:11px;color:#aaa;}
+.member-check .m-sent{font-size:11px;color:#2e7d32;margin-left:auto;flex-shrink:0;}
+.team-header{background:#f8fafc;padding:7px 12px;font-size:11px;font-weight:600;color:#888;letter-spacing:0.5px;border-bottom:1px solid #f0f0f0;}
+.select-all-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
+.select-all-bar label{font-size:13px;color:#555;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.selected-count{margin-left:auto;font-size:12px;color:#2D7CD2;font-weight:600;}
 .pw-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
 .pw-box h2{font-size:18px;font-weight:600;margin-bottom:6px;}
 .pw-box p{font-size:13px;color:#888;margin-bottom:1.5rem;}
@@ -110,6 +121,7 @@ tr:hover td{background:#fdfdff;}
     <option value="pending">미확정</option>
   </select>
   <button class="btn btn-primary btn-sm" onclick="exportCSV()">CSV 내보내기</button>
+  <button class="btn btn-outline btn-sm" onclick="openSurveyDMModal()" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
   <button class="btn btn-danger btn-sm" onclick="clearAll()">전체 삭제</button>
 </div>
 
@@ -125,7 +137,31 @@ tr:hover td{background:#fdfdff;}
 </div>
 <p style="font-size:12px;color:#ccc;margin-top:1rem;text-align:right;">데이터는 Google Drive에 저장됩니다.</p>
 
-<!-- 일정 확정 모달 -->
+<!-- 설문 DM 발송 모달 -->
+<div class="modal-bg" id="modal-survey-dm">
+  <div class="modal" style="max-width:520px;">
+    <h2>📨 설문지 DM 발송</h2>
+    <p class="modal-sub">발송할 팀원을 선택하면 Slack으로 설문지 링크가 발송됩니다.</p>
+
+    <div style="border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+      <!-- 전체 선택 -->
+      <div class="select-all-bar">
+        <label>
+          <input type="checkbox" id="check-all" onchange="toggleAllMembers(this.checked)">
+          전체 선택
+        </label>
+        <span class="selected-count" id="selected-count">0명 선택</span>
+      </div>
+      <!-- 팀원 목록 -->
+      <div id="survey-member-list" style="max-height:360px;overflow-y:auto;"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
+      <button class="btn btn-confirm" id="send-survey-btn" onclick="sendSurveyDMs()">📨 선택한 팀원에게 발송</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="modal-confirm">
   <div class="modal">
     <h2 id="confirm-title">📅 원온원 일정 확정</h2>
@@ -385,6 +421,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 document.getElementById('modal-confirm').addEventListener('click',function(e){if(e.target===this)closeConfirmModal();});
+document.getElementById('modal-survey-dm').addEventListener('click',function(e){if(e.target===this)closeSurveyDMModal();});
 </script>
 </body>
 </html>
