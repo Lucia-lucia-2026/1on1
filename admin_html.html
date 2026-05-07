@@ -420,15 +420,7 @@ function showToast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2800);
 }
-// 모든 버튼 이벤트를 여기서 등록
-window.addEventListener('DOMContentLoaded', function(){
-  var surveyBtn = document.getElementById('survey-dm-btn');
-  var clearBtn = document.getElementById('clear-all-btn');
-  var confirmModal = document.getElementById('modal-confirm');
-  if(surveyBtn) surveyBtn.onclick = function(){ openSurveyDMModal(); };
-  if(clearBtn) clearBtn.onclick = function(){ clearAll(); };
-  if(confirmModal) confirmModal.addEventListener('click', function(e){ if(e.target===this) closeConfirmModal(); });
-});
+document.getElementById('modal-confirm').addEventListener('click',function(e){if(e.target===this)closeConfirmModal();});
 </script>
 </body>
 </html>
