@@ -121,8 +121,8 @@ tr:hover td{background:#fdfdff;}
     <option value="pending">미확정</option>
   </select>
   <button class="btn btn-primary btn-sm" onclick="exportCSV()">CSV 내보내기</button>
-  <button class="btn btn-outline btn-sm" id="survey-dm-btn" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
-  <button class="btn btn-danger btn-sm" id="clear-all-btn">전체 삭제</button>
+  <button class="btn btn-outline btn-sm" onclick="openSurveyDMModal()" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
+  <button class="btn btn-danger btn-sm" onclick="clearAll()">전체 삭제</button>
 </div>
 
 <div class="card">
