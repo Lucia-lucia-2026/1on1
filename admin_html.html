@@ -422,9 +422,12 @@ function showToast(msg){
 }
 // 모든 버튼 이벤트를 여기서 등록
 window.addEventListener('DOMContentLoaded', function(){
-  document.getElementById('survey-dm-btn').addEventListener('click', survey-dm-btn);
-  document.getElementById('clear-all-btn').addEventListener('click', clearAll);
-  document.getElementById('modal-confirm').addEventListener('click', function(e){ if(e.target===this) closeConfirmModal(); });
+  var surveyBtn = document.getElementById('survey-dm-btn');
+  var clearBtn = document.getElementById('clear-all-btn');
+  var confirmModal = document.getElementById('modal-confirm');
+  if(surveyBtn) surveyBtn.onclick = function(){ openSurveyDMModal(); };
+  if(clearBtn) clearBtn.onclick = function(){ clearAll(); };
+  if(confirmModal) confirmModal.addEventListener('click', function(e){ if(e.target===this) closeConfirmModal(); });
 });
 </script>
 </body>
