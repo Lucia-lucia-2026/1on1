@@ -21,7 +21,7 @@ select:focus,input[type=text]:focus{border-color:#7f77dd;}
 .btn-primary{background:#7f77dd;color:#fff;}
 .btn-confirm{background:#2D7CD2;color:#fff;}
 .btn-outline{background:#fff;color:#555;border:1px solid #e0e0e0;}
-.btn-danger{background:#fff;color:#e24b4a;border:1px solid #f0c0c0;margin-left:auto;}
+.btn-danger{background:#fff;color:#e24b4a;border:1px solid #f0c0c0;}
 .btn-sm{padding:6px 12px;font-size:12px;}
 .card{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -34,8 +34,8 @@ tr:hover td{background:#fdfdff;}
 .b-product{background:#EAF3DE;color:#3B6D11;}
 .b-commerce{background:#FAEEDA;color:#854F0B;}
 .b-marketing{background:#FBEAF0;color:#993556;}
-.b-brand{background:#EEEDFE;color:#534AB7;}
 .b-me{background:#E0F7F4;color:#00695C;}
+.b-brand{background:#EEEDFE;color:#534AB7;}
 .b-face{background:#e8f5e9;color:#2e7d32;}
 .b-gather{background:#e3f2fd;color:#1565c0;}
 .tag-wrap{display:flex;flex-wrap:wrap;gap:4px;}
@@ -47,19 +47,7 @@ tr:hover td{background:#fdfdff;}
 .confirm-btn:hover{background:#e8f4ff;}
 .confirmed-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#2e7d32;background:#e8f5e9;padding:3px 10px;border-radius:100px;}
 .cal-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#1a73e8;background:#e8f0fe;padding:2px 8px;border-radius:100px;margin-top:3px;}
-
-/* 설문 발송 모달 */
-.member-check{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f8f8f8;cursor:pointer;transition:background 0.1s;}
-.member-check:hover{background:#f5f9ff;}
-.member-check input[type=checkbox]{width:16px;height:16px;accent-color:#2D7CD2;cursor:pointer;flex-shrink:0;}
-.member-check .m-info{flex:1;}
-.member-check .m-name{font-size:13px;font-weight:500;}
-.member-check .m-team{font-size:11px;color:#aaa;}
-.member-check .m-sent{font-size:11px;color:#2e7d32;margin-left:auto;flex-shrink:0;}
-.team-header{background:#f8fafc;padding:7px 12px;font-size:11px;font-weight:600;color:#888;letter-spacing:0.5px;border-bottom:1px solid #f0f0f0;}
-.select-all-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
-.select-all-bar label{font-size:13px;color:#555;cursor:pointer;display:flex;align-items:center;gap:6px;}
-.selected-count{margin-left:auto;font-size:12px;color:#2D7CD2;font-weight:600;}
+.pw-screen{position:fixed;inset:0;background:#f5f5f0;display:flex;align-items:center;justify-content:center;z-index:9999;}
 .pw-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
 .pw-box h2{font-size:18px;font-weight:600;margin-bottom:6px;}
 .pw-box p{font-size:13px;color:#888;margin-bottom:1.5rem;}
@@ -67,9 +55,7 @@ tr:hover td{background:#fdfdff;}
 .pw-box input:focus{border-color:#7f77dd;}
 .pw-box .btn-primary{width:100%;padding:12px;}
 .pw-error{font-size:12px;color:#e24b4a;margin-top:4px;min-height:18px;}
-
-.modal-bg{display:none;position:fixed;inset:0;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;padding:1rem;}
-.modal-bg.open{display:flex;}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;padding:1rem;}
 .modal{background:#fff;border-radius:20px;width:100%;max-width:480px;padding:2rem;box-shadow:0 8px 32px rgba(0,0,0,0.15);max-height:90vh;overflow-y:auto;}
 .modal h2{font-size:18px;font-weight:700;margin-bottom:6px;}
 .modal .modal-sub{font-size:13px;color:#888;margin-bottom:1.5rem;}
@@ -109,7 +95,7 @@ tr:hover td{background:#fdfdff;}
   <input type="text" id="search" placeholder="이름 검색..." oninput="render()" style="width:140px;">
   <select id="f-team" onchange="render()">
     <option value="">전체 팀</option>
-    <option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option>    <option>마에팅팀</option><option>브랜드팀</option>
+    <option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀</option><option>브랜드팀</option>
   </select>
   <select id="f-method" onchange="render()">
     <option value="">전체 방식</option>
@@ -128,34 +114,14 @@ tr:hover td{background:#fdfdff;}
 <div class="card">
   <table>
     <thead>
-      <tr>
-        <th>이름</th><th>팀</th><th>희망 날짜</th><th>희망 시간대</th><th>방식</th><th>기타</th><th>제출 시각</th><th>확정 상태</th><th></th>
-      </tr>
+      <tr><th>이름</th><th>팀</th><th>희망 날짜</th><th>희망 시간대</th><th>방식</th><th>기타</th><th>제출 시각</th><th>확정 상태</th><th></th></tr>
     </thead>
     <tbody id="tbody"><tr><td colspan="9" class="loading-row">데이터를 불러오는 중...</td></tr></tbody>
   </table>
 </div>
 <p style="font-size:12px;color:#ccc;margin-top:1rem;text-align:right;">데이터는 Google Drive에 저장됩니다.</p>
 
-<!-- 설문 DM 발송 모달 -->
-<div class="modal-bg" id="modal-survey-dm" style="display:none;">
-  <div class="modal" style="max-width:400px;">
-    <h2>📨 설문지 DM 발송</h2>
-    <p class="modal-sub">팀원에게 Slack으로 설문지 링크를 발송합니다.</p>
-    <div class="field">
-      <label>팀원 이름 *</label>
-      <input type="text" id="s-name" placeholder="예: 홍길동">
-    </div>
-    <div class="field">
-      <label>Slack User ID *</label>
-      <input type="text" id="s-slack" placeholder="U0XXXXXXXXX">
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
-      <button class="btn btn-confirm" id="send-survey-btn" onclick="sendSurveyDM()">📨 발송하기</button>
-    </div>
-  </div>
-</div>
+<!-- 일정 확정 모달 -->
 <div class="modal-bg" id="modal-confirm">
   <div class="modal">
     <h2 id="confirm-title">📅 원온원 일정 확정</h2>
@@ -165,10 +131,7 @@ tr:hover td{background:#fdfdff;}
     <div class="field"><label>확정 일시 *</label><input type="datetime-local" id="c-datetime"></div>
     <div class="field">
       <label>원온원 방식 *</label>
-      <select id="c-method">
-        <option value="대면">🏢 대면</option>
-        <option value="비대면(게더)">💻 비대면(게더)</option>
-      </select>
+      <select id="c-method"><option value="대면">🏢 대면</option><option value="비대면(게더)">💻 비대면(게더)</option></select>
     </div>
     <div class="field"><label>비고 <span style="font-weight:400;color:#bbb;">(선택)</span></label><textarea id="c-note" placeholder="전달할 추가 내용이 있으면 입력해 주세요"></textarea></div>
     <div style="border-top:1px solid #f0f0f0;margin:1.25rem 0;"></div>
@@ -184,28 +147,31 @@ tr:hover td{background:#fdfdff;}
   </div>
 </div>
 
+<!-- 설문 DM 발송 모달 -->
+<div class="modal-bg" id="modal-survey-dm">
+  <div class="modal" style="max-width:400px;">
+    <h2>📨 설문지 DM 발송</h2>
+    <p class="modal-sub">팀원에게 Slack으로 설문지 링크를 발송합니다.</p>
+    <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동"></div>
+    <div class="field"><label>Slack User ID *</label><input type="text" id="s-slack" placeholder="U0XXXXXXXXX"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
+      <button class="btn btn-confirm" id="send-survey-btn" onclick="sendSurveyDM()">📨 발송하기</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const PW = 'admin1234';
-const API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
-const TEAM_CLASS = {
-  'Biz팀':'b-biz',
-  '프로덕트팀':'b-product',
-  '커머스팀':'b-commerce',
-  '마케팅팀':'b-marketing',
-  '마에팅팀':'b-me',
-  '브랜드팀':'b-brand'
-};
+var PW = 'admin1234';
+var API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
+var TEAM_CLASS = {'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','마에팅팀':'b-me','브랜드팀':'b-brand'};
+var surveys = [];
+var currentId = null;
 
-function getTeamClass(team) {
-  return TEAM_CLASS[team] || 'b-me';
-}
+function getTeamClass(team){return TEAM_CLASS[team]||'b-me';}
 
-let surveys = [];
-let currentId = null;
-
-/* ── 비밀번호 ── */
 function checkPw(){
   if(document.getElementById('pw-input').value===PW){
     document.getElementById('pw-screen').style.display='none';
@@ -215,206 +181,225 @@ function checkPw(){
   }
 }
 
-/* ── JSONP API ── */
 function api(params){
-  return new Promise(resolve=>{
-    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const enc={...params};
-    ['record','survey','data'].forEach(k=>{
+  return new Promise(function(resolve){
+    var cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    var enc={};
+    for(var k in params) enc[k]=params[k];
+    ['record','survey','data'].forEach(function(k){
       if(enc[k]) enc[k]=btoa(unescape(encodeURIComponent(enc[k])));
     });
-    const qs=new URLSearchParams({...enc,callback:cb}).toString();
-    const s=document.createElement('script');
-    const t=setTimeout(()=>{cleanup();showToast('❌ 서버 연결 시간 초과');resolve(null);},20000);
+    var qs=new URLSearchParams(Object.assign({},enc,{callback:cb})).toString();
+    var s=document.createElement('script');
+    var t=setTimeout(function(){cleanup();showToast('❌ 서버 연결 시간 초과');resolve(null);},20000);
     function cleanup(){delete window[cb];s.parentNode&&s.parentNode.removeChild(s);clearTimeout(t);}
-    window[cb]=d=>{cleanup();resolve(d);};
-    s.onerror=()=>{cleanup();showToast('❌ 서버 연결 실패');resolve(null);};
-    s.src=`${API_URL}?${qs}`;
+    window[cb]=function(d){cleanup();resolve(d);};
+    s.onerror=function(){cleanup();showToast('❌ 서버 연결 실패');resolve(null);};
+    s.src=API_URL+'?'+qs;
     document.head.appendChild(s);
   });
 }
 
-/* ── 설문 데이터 로드 ── */
-async function loadSurveys(){
-  const res=await api({action:'getSurveys'});
-  surveys=res?.surveys||[];
-  renderStats();
-  render();
+function loadSurveys(){
+  api({action:'getSurveys'}).then(function(res){
+    surveys=res&&res.surveys?res.surveys:[];
+    renderStats();
+    render();
+  });
 }
 
-/* ── 통계 ── */
 function renderStats(){
-  const confirmed=surveys.filter(r=>r.confirmed).length;
-  document.getElementById('stat-grid').innerHTML=`
-    <div class="stat"><div class="stat-num">${surveys.length}</div><div class="stat-label">전체 응답</div></div>
-    <div class="stat"><div class="stat-num">${surveys.filter(r=>r.method==='대면').length}</div><div class="stat-label">대면 희망</div></div>
-    <div class="stat"><div class="stat-num">${surveys.filter(r=>r.method==='비대면(게더)').length}</div><div class="stat-label">비대면 희망</div></div>
-    <div class="stat"><div class="stat-num" style="color:#2D7CD2;">${confirmed}</div><div class="stat-label">확정 완료</div></div>
-    <div class="stat"><div class="stat-num" style="color:#e6a817;">${surveys.length-confirmed}</div><div class="stat-label">미확정</div></div>`;
+  var confirmed=surveys.filter(function(r){return r.confirmed;}).length;
+  document.getElementById('stat-grid').innerHTML=
+    '<div class="stat"><div class="stat-num">'+surveys.length+'</div><div class="stat-label">전체 응답</div></div>'
+    +'<div class="stat"><div class="stat-num">'+surveys.filter(function(r){return r.method==='대면';}).length+'</div><div class="stat-label">대면 희망</div></div>'
+    +'<div class="stat"><div class="stat-num">'+surveys.filter(function(r){return r.method==='비대면(게더)';}).length+'</div><div class="stat-label">비대면 희망</div></div>'
+    +'<div class="stat"><div class="stat-num" style="color:#2D7CD2;">'+confirmed+'</div><div class="stat-label">확정 완료</div></div>'
+    +'<div class="stat"><div class="stat-num" style="color:#e6a817;">'+(surveys.length-confirmed)+'</div><div class="stat-label">미확정</div></div>';
 }
 
-/* ── 목록 렌더링 ── */
 function render(){
-  const q=document.getElementById('search').value.trim().toLowerCase();
-  const ft=document.getElementById('f-team').value;
-  const fm=document.getElementById('f-method').value;
-  const fs=document.getElementById('f-status').value;
-  const filtered=surveys.filter(r=>{
-    if(q&&!r.name.toLowerCase().includes(q))return false;
+  var q=document.getElementById('search').value.trim().toLowerCase();
+  var ft=document.getElementById('f-team').value;
+  var fm=document.getElementById('f-method').value;
+  var fs=document.getElementById('f-status').value;
+  var filtered=surveys.filter(function(r){
+    if(q&&r.name.toLowerCase().indexOf(q)<0)return false;
     if(ft&&r.team!==ft)return false;
     if(fm&&r.method!==fm)return false;
     if(fs==='confirmed'&&!r.confirmed)return false;
     if(fs==='pending'&&r.confirmed)return false;
     return true;
   });
-  const tbody=document.getElementById('tbody');
-  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="9" class="empty">응답이 없습니다.</td></tr>`;return;}
-  tbody.innerHTML=filtered.map(r=>{
-    const mc=r.method==='대면'?'b-face':'b-gather';
-    const tc=getTeamClass(r.team);
-    const dates=(r.dates||[]).map(d=>`<span class="tag">${d}</span>`).join('');
-    const times=(r.times||[]).map(t=>`<span class="tag">${t}</span>`).join('');
-    const historyHTML=(r.sendHistory||[]).slice().reverse().map((h,i)=>
-      `<div style="font-size:11px;color:#aaa;padding:2px 0;">${i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':''}${h.sentAt} · ${h.method}</div>`
-    ).join('');
-    const calBadge=r.calendarEventId?`<div class="cal-badge">📅 캘린더 등록됨</div>`:'';
-    const confirmCell=r.confirmed
-      ? `<div style="display:flex;flex-direction:column;gap:4px;">
-           <div class="confirmed-badge">✅ 확정 (${r.sendHistory?.length||1}회 발송)</div>
-           ${calBadge}
-           <div style="margin-top:2px;">${historyHTML}</div>
-           <button class="confirm-btn" style="margin-top:4px;" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}',true)">재발송 →</button>
-         </div>`
-      : `<button class="confirm-btn" onclick="openConfirmModal('${r.id}','${r.name}','${r.method}',false)">일정 확정 →</button>`;
-    return `<tr>
-      <td><strong>${r.name}</strong></td>
-      <td><span class="badge ${tc}">${r.team}</span></td>
-      <td><div class="tag-wrap">${dates}</div></td>
-      <td><div class="tag-wrap">${times}</div></td>
-      <td><span class="badge ${mc}">${r.method}</span></td>
-      <td class="etc-cell">${r.etc||'—'}</td>
-      <td style="color:#bbb;font-size:12px;white-space:nowrap;">${r.ts}</td>
-      <td>${confirmCell}</td>
-      <td><button class="del-btn" onclick="deleteRow('${r.id}')">✕</button></td>
-    </tr>`;
+  var tbody=document.getElementById('tbody');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" class="empty">응답이 없습니다.</td></tr>';return;}
+  tbody.innerHTML=filtered.map(function(r){
+    var mc=r.method==='대면'?'b-face':'b-gather';
+    var tc=getTeamClass(r.team);
+    var dates=(r.dates||[]).map(function(d){return '<span class="tag">'+d+'</span>';}).join('');
+    var times=(r.times||[]).map(function(t){return '<span class="tag">'+t+'</span>';}).join('');
+    var historyHTML=(r.sendHistory||[]).slice().reverse().map(function(h,i){
+      return '<div style="font-size:11px;color:#aaa;padding:2px 0;">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+h.sentAt+' · '+h.method+'</div>';
+    }).join('');
+    var calBadge=r.calendarEventId?'<div class="cal-badge">📅 캘린더 등록됨</div>':'';
+    var confirmCell=r.confirmed
+      ?'<div style="display:flex;flex-direction:column;gap:4px;">'
+        +'<div class="confirmed-badge">✅ 확정 ('+(r.sendHistory?r.sendHistory.length:1)+'회 발송)</div>'
+        +calBadge
+        +'<div style="margin-top:2px;">'+historyHTML+'</div>'
+        +'<button class="confirm-btn" style="margin-top:4px;" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',true)">재발송 →</button>'
+        +'</div>'
+      :'<button class="confirm-btn" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',false)">일정 확정 →</button>';
+    return '<tr>'
+      +'<td><strong>'+r.name+'</strong></td>'
+      +'<td><span class="badge '+tc+'">'+r.team+'</span></td>'
+      +'<td><div class="tag-wrap">'+dates+'</div></td>'
+      +'<td><div class="tag-wrap">'+times+'</div></td>'
+      +'<td><span class="badge '+mc+'">'+r.method+'</span></td>'
+      +'<td class="etc-cell">'+(r.etc||'—')+'</td>'
+      +'<td style="color:#bbb;font-size:12px;white-space:nowrap;">'+r.ts+'</td>'
+      +'<td>'+confirmCell+'</td>'
+      +'<td><button class="del-btn" onclick="deleteRow(\''+r.id+'\')">✕</button></td>'
+      +'</tr>';
   }).join('');
 }
 
-/* ── 확정 모달 ── */
 function openConfirmModal(id,name,method,isResend){
   currentId=id;
-  const r=surveys.find(r=>String(r.id)===String(id));
+  var r=surveys.filter(function(x){return String(x.id)===String(id);})[0];
   document.getElementById('confirm-title').textContent=isResend?'📧 일정 재발송':'📅 원온원 일정 확정';
-  document.getElementById('confirm-sub').textContent=isResend?`${name} 님께 수정된 일정을 다시 발송합니다.`:`${name} 님께 확정 일정을 이메일로 안내합니다.`;
+  document.getElementById('confirm-sub').textContent=isResend?name+' 님께 수정된 일정을 다시 발송합니다.':name+' 님께 확정 일정을 이메일로 안내합니다.';
   document.getElementById('c-name').value=name;
-  document.getElementById('c-email').value=isResend?(r?.confirmedEmail||''):'';
-  document.getElementById('c-datetime').value=isResend?(r?.confirmedDatetime||''):'';
-  document.getElementById('c-method').value=isResend?(r?.confirmedMethod||method):method||'대면';
-  document.getElementById('c-note').value=isResend?(r?.confirmedNote||''):'';
-  document.getElementById('c-slack').value=isResend?(r?.confirmedSlack||''):'';
-  const btn=document.getElementById('send-btn');
+  document.getElementById('c-email').value=isResend?(r&&r.confirmedEmail||''):'';
+  document.getElementById('c-datetime').value=isResend?(r&&r.confirmedDatetime||''):'';
+  document.getElementById('c-method').value=isResend?(r&&r.confirmedMethod||method):method||'대면';
+  document.getElementById('c-note').value=isResend?(r&&r.confirmedNote||''):'';
+  document.getElementById('c-slack').value=isResend?(r&&r.confirmedSlack||''):'';
+  var btn=document.getElementById('send-btn');
   btn.textContent=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 발송';
   btn.dataset.resend=isResend?'true':'';
-  document.getElementById('modal-confirm').classList.add('open');
+  document.getElementById('modal-confirm').style.display='flex';
 }
-function closeConfirmModal(){document.getElementById('modal-confirm').classList.remove('open');currentId=null;}
 
-/* ── 발송 ── */
-async function sendConfirm(){
-  const email=document.getElementById('c-email').value.trim();
-  const datetime=document.getElementById('c-datetime').value;
-  const method=document.getElementById('c-method').value;
-  const note=document.getElementById('c-note').value.trim();
-  const name=document.getElementById('c-name').value;
-  const slackUserId=document.getElementById('c-slack').value.trim();
-  const isResend=!!document.getElementById('send-btn').dataset.resend;
+function closeConfirmModal(){
+  document.getElementById('modal-confirm').style.display='none';
+  currentId=null;
+}
+
+function sendConfirm(){
+  var email=document.getElementById('c-email').value.trim();
+  var datetime=document.getElementById('c-datetime').value;
+  var method=document.getElementById('c-method').value;
+  var note=document.getElementById('c-note').value.trim();
+  var name=document.getElementById('c-name').value;
+  var slackUserId=document.getElementById('c-slack').value.trim();
+  var isResend=!!document.getElementById('send-btn').dataset.resend;
   if(!email){showToast('⚠️ 이메일 주소를 입력해 주세요');return;}
   if(!datetime){showToast('⚠️ 확정 일시를 선택해 주세요');return;}
-
-  const btn=document.getElementById('send-btn');
+  var btn=document.getElementById('send-btn');
   btn.innerHTML='<span class="spinner-inline"></span>발송 중...';
   btn.disabled=true;
-
-  // 기존 캘린더 이벤트 ID 전달 (재발송 시 이벤트 수정용)
-  const r=surveys.find(r=>String(r.id)===String(currentId));
-  const calendarEventId=r?.calendarEventId||null;
-  const changeCount = (r?.sendHistory?.length || 0); // 현재까지 발송 횟수 = 이번 변경 횟수
-
-  const data=JSON.stringify({name,email,datetime,method,note,isResend,calendarEventId,changeCount,slackUserId});
-  const res=await api({action:'sendEmail',data});
-
-  // Slack DM 별도 발송
-  let slackResult = null;
-  if(slackUserId && res?.success){
-    slackResult=await api({action:'sendSlack',data:JSON.stringify({name,slackUserId,datetime,method,note,isResend,changeCount})});
-  }
-
-  btn.innerHTML=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 이메일 발송';
-  btn.disabled=false;
-
-  if(res&&res.success){
-    // Drive에 상태 업데이트
-    const idx=surveys.findIndex(r=>String(r.id)===String(currentId));
-    if(idx>=0){
-      const sentAt=new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      if(!surveys[idx].sendHistory) surveys[idx].sendHistory=[];
-      surveys[idx].sendHistory.push({sentAt,datetime,method,note,email});
-      surveys[idx].confirmed=true;
-      surveys[idx].confirmedAt=new Date(datetime).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      surveys[idx].confirmedEmail=email;
-      surveys[idx].confirmedDatetime=datetime;
-      surveys[idx].confirmedMethod=method;
-      surveys[idx].confirmedNote=note;
-      surveys[idx].confirmedSlack=slackUserId;
-      if(res.calendarEventId) surveys[idx].calendarEventId=res.calendarEventId;
-      // 기존 id 유지하면서 Drive 업데이트 (새 row 생성 방지)
-      await api({action:'saveSurvey', survey:JSON.stringify(surveys[idx])});
-    }
-    closeConfirmModal();
-    await loadSurveys();
-    const slackMsg = slackUserId
-      ? (slackResult?.success ? ' + Slack DM 발송 완료!' : ' (Slack 발송 실패)')
-      : '';
-    showToast(isResend?`✅ 변경 일정 재발송${slackMsg}`:`✅ 이메일 + 캘린더 등록 완료${slackMsg}`);
-  } else {
-    showToast('❌ 발송 실패: '+(res?.error||'다시 시도해 주세요'));
-  }
+  var r=surveys.filter(function(x){return String(x.id)===String(currentId);})[0];
+  var calendarEventId=r&&r.calendarEventId||null;
+  var changeCount=r&&r.sendHistory?r.sendHistory.length:0;
+  var data=JSON.stringify({name:name,email:email,datetime:datetime,method:method,note:note,isResend:isResend,calendarEventId:calendarEventId,changeCount:changeCount,slackUserId:slackUserId});
+  api({action:'sendEmail',data:data}).then(function(res){
+    var slackPromise=slackUserId&&res&&res.success
+      ?api({action:'sendSlack',data:JSON.stringify({name:name,slackUserId:slackUserId,datetime:datetime,method:method,note:note,isResend:isResend,changeCount:changeCount})})
+      :Promise.resolve(null);
+    slackPromise.then(function(slackResult){
+      btn.innerHTML=isResend?'✉️ 수정 + 재발송':'✉️ 확정 + 발송';
+      btn.disabled=false;
+      if(res&&res.success){
+        var idx=surveys.findIndex(function(x){return String(x.id)===String(currentId);});
+        if(idx>=0){
+          var sentAt=new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+          if(!surveys[idx].sendHistory)surveys[idx].sendHistory=[];
+          surveys[idx].sendHistory.push({sentAt:sentAt,datetime:datetime,method:method,note:note,email:email});
+          surveys[idx].confirmed=true;
+          surveys[idx].confirmedAt=new Date(datetime).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+          surveys[idx].confirmedEmail=email;
+          surveys[idx].confirmedDatetime=datetime;
+          surveys[idx].confirmedMethod=method;
+          surveys[idx].confirmedNote=note;
+          surveys[idx].confirmedSlack=slackUserId;
+          if(res.calendarEventId)surveys[idx].calendarEventId=res.calendarEventId;
+          api({action:'saveSurvey',survey:JSON.stringify(surveys[idx])}).then(function(){
+            loadSurveys();
+          });
+        }
+        closeConfirmModal();
+        var slackMsg=slackUserId?(slackResult&&slackResult.success?' + Slack DM 완료':' (Slack 실패)'):'';
+        showToast(isResend?'✅ 변경 일정 재발송'+slackMsg:'✅ 이메일+캘린더 등록 완료'+slackMsg);
+      } else {
+        showToast('❌ 발송 실패: '+(res&&res.error?res.error:'다시 시도해 주세요'));
+      }
+    });
+  });
 }
 
-/* ── 삭제 ── */
-async function deleteRow(id){
+function deleteRow(id){
   if(!confirm('이 응답을 삭제할까요?'))return;
-  await api({action:'deleteSurvey',id:String(id)});
-  await loadSurveys();
-  showToast('🗑️ 삭제되었습니다');
-}
-async function clearAll(){
-  if(!confirm('모든 응답을 삭제할까요? 복구할 수 없습니다.'))return;
-  await api({action:'clearSurveys'});
-  await loadSurveys();
+  api({action:'deleteSurvey',id:String(id)}).then(function(){loadSurveys();showToast('🗑️ 삭제되었습니다');});
 }
 
-/* ── CSV ── */
+function clearAll(){
+  if(!confirm('모든 응답을 삭제할까요?'))return;
+  api({action:'clearSurveys'}).then(function(){loadSurveys();});
+}
+
 function exportCSV(){
   if(!surveys.length){showToast('⚠️ 내보낼 데이터가 없습니다');return;}
-  const rows=[['이름','팀','희망날짜','희망시간대','방식','기타','제출시각','확정여부','확정일시','발송횟수']];
-  surveys.forEach(r=>rows.push([
-    r.name,r.team,(r.dates||[]).join(' / '),(r.times||[]).join(' / '),
-    r.method,r.etc,r.ts,r.confirmed?'확정':'미확정',r.confirmedAt||'',r.sendHistory?.length||0
-  ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`)));
-  const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
-  const a=document.createElement('a');
+  var rows=[['이름','팀','희망날짜','희망시간대','방식','기타','제출시각','확정여부','확정일시','발송횟수']];
+  surveys.forEach(function(r){
+    rows.push([r.name,r.team,(r.dates||[]).join(' / '),(r.times||[]).join(' / '),r.method,r.etc,r.ts,r.confirmed?'확정':'미확정',r.confirmedAt||'',r.sendHistory?r.sendHistory.length:0]
+      .map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}));
+  });
+  var csv='\uFEFF'+rows.map(function(r){return r.join(',');}).join('\n');
+  var a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download=`1on1_responses_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download='1on1_responses_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
 }
 
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
+function openSurveyDMModal(){
+  document.getElementById('s-name').value='';
+  document.getElementById('s-slack').value='';
+  document.getElementById('modal-survey-dm').style.display='flex';
 }
-document.getElementById('modal-confirm').addEventListener('click',function(e){if(e.target===this)closeConfirmModal();});
+
+function closeSurveyDMModal(){
+  document.getElementById('modal-survey-dm').style.display='none';
+}
+
+function sendSurveyDM(){
+  var name=document.getElementById('s-name').value.trim();
+  var slackUserId=document.getElementById('s-slack').value.trim();
+  if(!name){showToast('⚠️ 팀원 이름을 입력해 주세요');return;}
+  if(!slackUserId){showToast('⚠️ Slack User ID를 입력해 주세요');return;}
+  var btn=document.getElementById('send-survey-btn');
+  btn.innerHTML='<span class="spinner-inline"></span>발송 중...';
+  btn.disabled=true;
+  api({action:'sendSurveyDM',data:JSON.stringify({name:name,slackUserId:slackUserId})}).then(function(res){
+    btn.innerHTML='📨 발송하기';
+    btn.disabled=false;
+    if(res&&res.success){
+      closeSurveyDMModal();
+      showToast('✅ '+name+' 님께 설문지 DM이 발송되었습니다!');
+    } else {
+      showToast('❌ 발송 실패: '+(res&&res.error?res.error:'다시 시도해 주세요'));
+    }
+  });
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2800);
+}
+
+document.getElementById('modal-confirm').onclick=function(e){if(e.target===this)closeConfirmModal();};
+document.getElementById('modal-survey-dm').onclick=function(e){if(e.target===this)closeSurveyDMModal();};
 </script>
 </body>
 </html>
