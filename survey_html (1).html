@@ -190,18 +190,29 @@ const TIMES = ['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','
 const DAY_KO = ['일','월','화','수','목','금','토'];
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-// 2026년 5월 ~ 12월 주중 날짜 생성
+// 이번 달 포함 6개월치 주중 날짜 생성 (접속 시점 기준으로 자동 계산)
+const MONTHS_TO_SHOW = 6;      // 표시할 개월 수 (이번 달 포함)
+const HIDE_PAST_DATES = true;  // 오늘 이전 날짜는 숨김 (false면 이번 달 전체 표시)
+
 function buildMonths() {
   const months = [];
-  for (let m = 4; m <= 11; m++) { // 0-indexed: 4=5월, 11=12월
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < MONTHS_TO_SHOW; i++) {
+    const first = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const year = first.getFullYear();
+    const month = first.getMonth();
     const days = [];
-    const d = new Date(2026, m, 1);
-    while (d.getMonth() === m) {
+    const d = new Date(year, month, 1);
+    while (d.getMonth() === month) {
       const dw = d.getDay();
-      if (dw !== 0 && dw !== 6) days.push(new Date(d));
+      const isPast = d < today;
+      if (dw !== 0 && dw !== 6 && !(HIDE_PAST_DATES && isPast)) days.push(new Date(d));
       d.setDate(d.getDate() + 1);
     }
-    months.push({ m, name: `2026년 ${MONTH_NAMES[m]}`, days });
+    if (!days.length) continue; // 선택 가능한 날짜가 없는 달은 생략
+    months.push({ m: year * 12 + month, name: `${year}년 ${MONTH_NAMES[month]}`, days });
   }
   return months;
 }
