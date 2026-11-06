@@ -95,7 +95,7 @@ tr:hover td{background:#fdfdff;}
   <input type="text" id="search" placeholder="이름 검색..." oninput="render()" style="width:140px;">
   <select id="f-team" onchange="render()">
     <option value="">전체 팀</option>
-    <option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀</option><option>브랜드팀</option>
+    <option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀(GA팀)</option><option>브랜드팀</option>
   </select>
   <select id="f-method" onchange="render()">
     <option value="">전체 방식</option>
@@ -154,7 +154,7 @@ tr:hover td{background:#fdfdff;}
     <h2>📨 설문지 DM 발송</h2>
     <p class="modal-sub">팀원에게 Slack으로 설문지 링크를 발송합니다.</p>
     <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동" oninput="autoFillDMTeam()"></div>
-    <div class="field"><label>팀 *</label><select id="s-team"><option value="">팀 선택</option><option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀</option><option>브랜드팀</option></select></div>
+    <div class="field"><label>팀 *</label><select id="s-team"><option value="">팀 선택</option><option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀(GA팀)</option><option>브랜드팀</option></select></div>
     <div class="field"><label>Slack User ID *</label><input type="text" id="s-slack" placeholder="U0XXXXXXXXX"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
@@ -186,11 +186,13 @@ tr:hover td{background:#fdfdff;}
 <script>
 var PW = 'admin1234';
 var API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
-var TEAM_CLASS = {'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','마에팅팀':'b-me','브랜드팀':'b-brand'};
+var TEAM_CLASS = {'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','마에팅팀':'b-me','마에팅팀(GA팀)':'b-me','브랜드팀':'b-brand'};
 var surveys = [];
 var dmLogs = [];   // 설문 DM 발송 기록 (type:'dmLog')
 var currentId = null;
 
+// 예전에 '마에팅팀'으로 저장된 데이터도 '마에팅팀(GA팀)'으로 통일해서 처리
+function normTeam(t){return t==='마에팅팀'?'마에팅팀(GA팀)':t;}
 function getTeamClass(team){return TEAM_CLASS[team]||'b-me';}
 
 function checkPw(){
@@ -248,7 +250,7 @@ function render(){
   var fs=document.getElementById('f-status').value;
   var filtered=surveys.filter(function(r){
     if(q&&r.name.toLowerCase().indexOf(q)<0)return false;
-    if(ft&&r.team!==ft)return false;
+    if(ft&&normTeam(r.team)!==ft)return false;
     if(fm&&r.method!==fm)return false;
     if(fs==='confirmed'&&!r.confirmed)return false;
     if(fs==='pending'&&r.confirmed)return false;
@@ -275,7 +277,7 @@ function render(){
       :'<button class="confirm-btn" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',false)">일정 확정 →</button>';
     return '<tr>'
       +'<td><strong>'+r.name+'</strong>'+dmHintHTML(r.name)+'</td>'
-      +'<td><span class="badge '+tc+'">'+r.team+'</span></td>'
+      +'<td><span class="badge '+tc+'">'+normTeam(r.team)+'</span></td>'
       +'<td><div class="tag-wrap">'+dates+'</div></td>'
       +'<td><div class="tag-wrap">'+times+'</div></td>'
       +'<td><span class="badge '+mc+'">'+r.method+'</span></td>'
@@ -383,7 +385,7 @@ function exportCSV(){
   if(!surveys.length){showToast('⚠️ 내보낼 데이터가 없습니다');return;}
   var rows=[['이름','팀','희망날짜','희망시간대','방식','기타','제출시각','확정여부','확정일시','발송횟수']];
   surveys.forEach(function(r){
-    rows.push([r.name,r.team,(r.dates||[]).join(' / '),(r.times||[]).join(' / '),r.method,r.etc,r.ts,r.confirmed?'확정':'미확정',r.confirmedAt||'',r.sendHistory?r.sendHistory.length:0]
+    rows.push([r.name,normTeam(r.team),(r.dates||[]).join(' / '),(r.times||[]).join(' / '),r.method,r.etc,r.ts,r.confirmed?'확정':'미확정',r.confirmedAt||'',r.sendHistory?r.sendHistory.length:0]
       .map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}));
   });
   var csv='\uFEFF'+rows.map(function(r){return r.join(',');}).join('\n');
@@ -447,7 +449,7 @@ function autoFillDMTeam(){
   var name=document.getElementById('s-name').value.trim(), sel=document.getElementById('s-team');
   if(!name||sel.value)return;
   var r=surveys.filter(function(x){return x.name===name&&x.team;})[0]||findDMLog(name);
-  if(r&&r.team)sel.value=r.team;
+  if(r&&r.team)sel.value=normTeam(r.team);
 }
 
 // 설문 DM 발송 시각을 팀원별로 누적 기록 (Google Drive에 저장)
@@ -478,7 +480,7 @@ function sendDMRequest(name,slack,team){
 
 // ── 발송내역 (팀별 보기) ──
 var dmStatus='all', dmOpenTeams={}, dmOpenHist={};
-var DM_TEAMS=['Biz팀','프로덕트팀','커머스팀','마에팅팀','브랜드팀'];
+var DM_TEAMS=['Biz팀','프로덕트팀','커머스팀','마에팅팀(GA팀)','브랜드팀'];
 var DM_OVERDUE_MS=3*24*60*60*1000;
 var DM_CHIP={done:['응답 완료','#E4F4EA','#1B6B3A'],pending:['미응답','#FFF1D6','#8A5A00'],overdue:['재발송 필요','#FCE4E4','#A12A2A']};
 
@@ -527,7 +529,7 @@ function renderDMLog(){
     return true;
   });
   var groups={};
-  list.forEach(function(x){var t=x.log.team||'팀 미지정';(groups[t]=groups[t]||[]).push(x);});
+  list.forEach(function(x){var t=normTeam(x.log.team)||'팀 미지정';(groups[t]=groups[t]||[]).push(x);});
   var order=DM_TEAMS.concat(Object.keys(groups).filter(function(t){return DM_TEAMS.indexOf(t)<0&&t!=='팀 미지정';}),['팀 미지정']).filter(function(t){return groups[t];});
   var box=document.getElementById('dm-groups');
   if(!order.length){box.innerHTML='<div style="text-align:center;color:#bbb;padding:2rem 0;font-size:13px;">'+(dmLogs.length?'조건에 맞는 발송 기록이 없습니다.':'아직 발송 기록이 없습니다.')+'</div>';return;}
@@ -561,7 +563,7 @@ function renderDMLog(){
 function resendDM(e){
   var name=decodeURIComponent(e), l=findDMLog(name);
   if(!l)return;
-  if(!l.slackUserId){closeDMLogModal();openSurveyDMModal(name,'',l.team||'');showToast('ℹ️ Slack User ID를 입력하면 재발송돼요');return;}
+  if(!l.slackUserId){closeDMLogModal();openSurveyDMModal(name,'',normTeam(l.team)||'');showToast('ℹ️ Slack User ID를 입력하면 재발송돼요');return;}
   if(!confirm(name+' 님께 설문 DM을 다시 보낼까요?'))return;
   sendDMRequest(name,l.slackUserId,l.team).then(function(ok){showToast(ok?'✅ '+name+' 님께 재발송했어요':'❌ 재발송에 실패했어요');});
 }
