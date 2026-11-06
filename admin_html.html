@@ -153,7 +153,8 @@ tr:hover td{background:#fdfdff;}
   <div class="modal" style="max-width:400px;">
     <h2>📨 설문지 DM 발송</h2>
     <p class="modal-sub">팀원에게 Slack으로 설문지 링크를 발송합니다.</p>
-    <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동"></div>
+    <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동" oninput="autoFillDMTeam()"></div>
+    <div class="field"><label>팀 *</label><select id="s-team"><option value="">팀 선택</option><option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀</option><option>브랜드팀</option></select></div>
     <div class="field"><label>Slack User ID *</label><input type="text" id="s-slack" placeholder="U0XXXXXXXXX"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
@@ -164,13 +165,19 @@ tr:hover td{background:#fdfdff;}
 
 <!-- 설문 DM 발송내역 모달 -->
 <div class="modal-bg" id="modal-dm-log">
-  <div class="modal" style="max-width:520px;">
-    <h2>📋 설문 DM 발송내역</h2>
-    <p class="modal-sub">팀원별로 설문지 DM을 보낸 시각이 기록됩니다.</p>
-    <div id="dm-log-body"></div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeDMLogModal()">닫기</button>
+  <div class="modal" style="max-width:780px;">
+    <h2>설문 DM 발송내역</h2>
+    <p class="modal-sub">팀별로 묶어서 발송 시각과 응답 여부를 확인합니다. 이름을 누르면 전체 발송 이력이 펼쳐져요.</p>
+    <div id="dm-stats" style="display:flex;gap:10px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="dm-search" placeholder="이름 검색" oninput="renderDMLog()" style="width:140px;padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;font-family:inherit;">
+      <select id="dm-period" onchange="renderDMLog()" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;font-family:inherit;"><option value="30">최근 30일</option><option value="7">최근 7일</option><option value="0">전체 기간</option></select>
+      <span style="flex:1"></span>
+      <button class="btn btn-confirm btn-sm" id="dm-bulk-btn" onclick="bulkResendDM()"></button>
     </div>
+    <div id="dm-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+    <div id="dm-groups" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeDMLogModal()">닫기</button></div>
   </div>
 </div>
 
@@ -386,9 +393,10 @@ function exportCSV(){
   a.click();
 }
 
-function openSurveyDMModal(){
-  document.getElementById('s-name').value='';
-  document.getElementById('s-slack').value='';
+function openSurveyDMModal(name,slack,team){
+  document.getElementById('s-name').value=name||'';
+  document.getElementById('s-slack').value=slack||'';
+  document.getElementById('s-team').value=team||'';
   document.getElementById('modal-survey-dm').style.display='flex';
 }
 
@@ -399,7 +407,9 @@ function closeSurveyDMModal(){
 function sendSurveyDM(){
   var name=document.getElementById('s-name').value.trim();
   var slackUserId=document.getElementById('s-slack').value.trim();
+  var team=document.getElementById('s-team').value;
   if(!name){showToast('⚠️ 팀원 이름을 입력해 주세요');return;}
+  if(!team){showToast('⚠️ 팀을 선택해 주세요');return;}
   if(!slackUserId){showToast('⚠️ Slack User ID를 입력해 주세요');return;}
   var btn=document.getElementById('send-survey-btn');
   btn.innerHTML='<span class="spinner-inline"></span>발송 중...';
@@ -410,7 +420,7 @@ function sendSurveyDM(){
     if(res&&res.success){
       closeSurveyDMModal();
       showToast('✅ '+name+' 님께 설문지 DM이 발송되었습니다!');
-      recordDMLog(name);
+      recordDMLog(name,team,slackUserId);
     } else {
       showToast('❌ 발송 실패: '+(res&&res.error?res.error:'다시 시도해 주세요'));
     }
@@ -432,45 +442,139 @@ function dmHintHTML(name){
   return '<div style="font-size:11px;color:#2D7CD2;margin-top:3px;font-weight:400;">📨 설문 DM '+escHTML(log.lastSentAt)+'</div>';
 }
 
+// 이름 입력 시 팀 자동 선택 (설문 응답 또는 이전 발송 기록에서)
+function autoFillDMTeam(){
+  var name=document.getElementById('s-name').value.trim(), sel=document.getElementById('s-team');
+  if(!name||sel.value)return;
+  var r=surveys.filter(function(x){return x.name===name&&x.team;})[0]||findDMLog(name);
+  if(r&&r.team)sel.value=r.team;
+}
+
 // 설문 DM 발송 시각을 팀원별로 누적 기록 (Google Drive에 저장)
-function recordDMLog(name){
-  var now=new Date();
-  var sentAt=now.toLocaleString('ko-KR');
-  var prev=findDMLog(name);
+function recordDMLog(name,team,slack){
+  var now=new Date(), sentAt=now.toLocaleString('ko-KR'), prev=findDMLog(name);
   var history=prev&&prev.sendHistory?prev.sendHistory.slice():[];
   history.push({sentAt:sentAt,ts:now.getTime()});
-  var record={id:'dm_'+name,type:'dmLog',name:name,sendHistory:history,lastSentAt:sentAt,lastSentTs:now.getTime()};
-  api({action:'saveSurvey',survey:JSON.stringify(record)}).then(function(res){
+  var record={id:'dm_'+name,type:'dmLog',name:name,team:team||(prev&&prev.team)||'',slackUserId:slack||(prev&&prev.slackUserId)||'',sendHistory:history,lastSentAt:sentAt,lastSentTs:now.getTime()};
+  return api({action:'saveSurvey',survey:JSON.stringify(record)}).then(function(res){
     if(res&&res.success){
       dmLogs=dmLogs.filter(function(l){return String(l.id)!==record.id;});
       dmLogs.push(record);
       render();
-    } else {
-      showToast('⚠️ DM은 발송됐지만 발송 시각 기록에 실패했어요');
+      if(document.getElementById('modal-dm-log').style.display==='flex')renderDMLog();
+      return true;
     }
+    showToast('⚠️ DM은 발송됐지만 발송 시각 기록에 실패했어요');
+    return false;
   });
 }
 
-function openDMLogModal(){
-  var body=document.getElementById('dm-log-body');
-  if(!dmLogs.length){
-    body.innerHTML='<div style="text-align:center;color:#bbb;padding:2rem 0;font-size:13px;">아직 발송 기록이 없습니다.</div>';
-  } else {
-    var rows=dmLogs.slice().sort(function(a,b){return (b.lastSentTs||0)-(a.lastSentTs||0);}).map(function(l){
-      var hist=(l.sendHistory||[]).slice().reverse().map(function(h,i){
-        return '<div style="font-size:11px;color:#aaa;padding:1px 0;">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+escHTML(h.sentAt)+'</div>';
-      }).join('');
-      return '<tr><td><strong>'+escHTML(l.name)+'</strong></td>'
-        +'<td>'+hist+'</td>'
-        +'<td style="white-space:nowrap;">'+(l.sendHistory?l.sendHistory.length:0)+'회</td></tr>';
-    }).join('');
-    body.innerHTML='<table><thead><tr><th>이름</th><th>발송 시각</th><th>횟수</th></tr></thead><tbody>'+rows+'</tbody></table>';
-  }
-  document.getElementById('modal-dm-log').style.display='flex';
+function sendDMRequest(name,slack,team){
+  return api({action:'sendSurveyDM',data:JSON.stringify({name:name,slackUserId:slack})}).then(function(res){
+    if(res&&res.success)return recordDMLog(name,team,slack).then(function(){return true;});
+    return false;
+  });
 }
 
-function closeDMLogModal(){
-  document.getElementById('modal-dm-log').style.display='none';
+// ── 발송내역 (팀별 보기) ──
+var dmStatus='all', dmOpenTeams={}, dmOpenHist={};
+var DM_TEAMS=['Biz팀','프로덕트팀','커머스팀','마에팅팀','브랜드팀'];
+var DM_OVERDUE_MS=3*24*60*60*1000;
+var DM_CHIP={done:['응답 완료','#E4F4EA','#1B6B3A'],pending:['미응답','#FFF1D6','#8A5A00'],overdue:['재발송 필요','#FCE4E4','#A12A2A']};
+
+function dmChip(st,label){var c=DM_CHIP[st];return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;background:'+c[1]+';color:'+c[2]+';white-space:nowrap;">'+(label||c[0])+'</span>';}
+function dmFmt(ts,fb){if(!ts)return fb||'';var d=new Date(ts),p=function(n){return n<10?'0'+n:n;};return (d.getMonth()+1)+'/'+d.getDate()+'('+'일월화수목금토'[d.getDay()]+') '+p(d.getHours())+':'+p(d.getMinutes());}
+function dmState(l){
+  var sent=l.lastSentTs||0;
+  var responded=surveys.some(function(s){if(s.name!==l.name)return false;var t=Number(s.id);return isNaN(t)||t>sent;});
+  if(responded)return 'done';
+  return Date.now()-sent>=DM_OVERDUE_MS?'overdue':'pending';
+}
+function dmBase(){
+  var days=Number(document.getElementById('dm-period').value), since=days?Date.now()-days*86400000:0;
+  return dmLogs.filter(function(l){return (l.lastSentTs||0)>=since;}).map(function(l){return {log:l,st:dmState(l)};});
+}
+
+function openDMLogModal(){
+  document.getElementById('modal-dm-log').style.display='flex';
+  renderDMLog();
+}
+function closeDMLogModal(){document.getElementById('modal-dm-log').style.display='none';}
+function setDMStatus(v){dmStatus=v;renderDMLog();}
+function toggleDMTeam(e){var t=decodeURIComponent(e);dmOpenTeams[t]=!(dmOpenTeams[t]===undefined?dmOpenTeams['__first']===t:dmOpenTeams[t]);renderDMLog();}
+function toggleDMHist(e){var id=decodeURIComponent(e);dmOpenHist[id]=!dmOpenHist[id];renderDMLog();}
+
+function renderDMLog(){
+  var q=document.getElementById('dm-search').value.trim().toLowerCase();
+  var base=dmBase(), c={done:0,pending:0,overdue:0};
+  base.forEach(function(x){c[x.st]++;});
+  var notDone=c.pending+c.overdue;
+  var stat=function(n,l,col){return '<div style="flex:1;padding:12px 14px;border:1px solid #e8e8e8;border-radius:12px;background:#fff;"><div style="font-size:22px;font-weight:700;color:'+col+';">'+n+'</div><div style="font-size:12px;color:#777;margin-top:2px;">'+l+'</div></div>';};
+  document.getElementById('dm-stats').innerHTML=stat(base.length,'발송한 팀원','#222')+stat(c.done,'응답 완료','#1B6B3A')+stat(notDone,'미응답','#8A5A00')+stat(c.overdue,'3일 이상 무응답','#A12A2A');
+  var pills=[['all','전체 '+base.length],['notdone','미응답 '+notDone],['overdue','재발송 필요 '+c.overdue],['done','응답 완료 '+c.done]];
+  document.getElementById('dm-pills').innerHTML=pills.map(function(p){
+    var on=dmStatus===p[0];
+    return '<button onclick="setDMStatus(\''+p[0]+'\')" style="height:32px;padding:0 14px;border-radius:999px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid '+(on?'#2D7CD2':'#d5dae1')+';background:'+(on?'#2D7CD2':'#fff')+';color:'+(on?'#fff':'#222')+';">'+p[1]+'</button>';
+  }).join('');
+  var bulk=document.getElementById('dm-bulk-btn');
+  bulk.textContent='미응답 '+notDone+'명 일괄 재발송';bulk.disabled=!notDone;
+
+  var list=base.filter(function(x){
+    if(q&&x.log.name.toLowerCase().indexOf(q)<0)return false;
+    if(dmStatus==='notdone')return x.st!=='done';
+    if(dmStatus==='overdue')return x.st==='overdue';
+    if(dmStatus==='done')return x.st==='done';
+    return true;
+  });
+  var groups={};
+  list.forEach(function(x){var t=x.log.team||'팀 미지정';(groups[t]=groups[t]||[]).push(x);});
+  var order=DM_TEAMS.concat(Object.keys(groups).filter(function(t){return DM_TEAMS.indexOf(t)<0&&t!=='팀 미지정';}),['팀 미지정']).filter(function(t){return groups[t];});
+  var box=document.getElementById('dm-groups');
+  if(!order.length){box.innerHTML='<div style="text-align:center;color:#bbb;padding:2rem 0;font-size:13px;">'+(dmLogs.length?'조건에 맞는 발송 기록이 없습니다.':'아직 발송 기록이 없습니다.')+'</div>';return;}
+  dmOpenTeams['__first']=order[0];
+  var cols='display:grid;grid-template-columns:1.1fr 1.6fr .6fr 1.1fr 70px;align-items:center;gap:8px;padding:0 14px;';
+  box.innerHTML=order.map(function(t){
+    var items=groups[t].sort(function(a,b){return (b.log.lastSentTs||0)-(a.log.lastSentTs||0);});
+    var pend=items.filter(function(x){return x.st!=='done';}).length;
+    var open=q?true:(dmOpenTeams[t]===undefined?dmOpenTeams['__first']===t:dmOpenTeams[t]);
+    var et=encodeURIComponent(t);
+    var head='<button onclick="toggleDMTeam(\''+et+'\')" style="width:100%;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border:0;background:'+(open?'#f3f7fc':'#fff')+';cursor:pointer;text-align:left;font-family:inherit;">'
+      +'<span style="font-size:11px;color:#777;">'+(open?'▼':'▶')+'</span><span style="font-size:14px;font-weight:700;color:#222;">'+escHTML(t)+'</span><span style="font-size:13px;color:#777;">'+items.length+'명</span><span style="flex:1"></span>'
+      +(pend?dmChip('pending','미응답 '+pend):dmChip('done','전원 응답'))
+      +'<span style="font-size:12px;color:#777;margin-left:6px;">마지막 발송 '+dmFmt(items[0].log.lastSentTs,items[0].log.lastSentAt)+'</span></button>';
+    var body='';
+    if(open){
+      body='<div style="'+cols+'height:32px;background:#fafbfc;border-top:1px solid #eef0f3;font-size:12px;color:#777;"><span>이름</span><span>마지막 발송 시각</span><span>횟수</span><span>상태</span><span></span></div>'
+      +items.map(function(x){
+        var l=x.log, en=encodeURIComponent(l.name), eid=encodeURIComponent(l.id), n=(l.sendHistory||[]).length;
+        var hist=dmOpenHist[l.id]?'<div style="padding:6px 14px 10px 28px;background:#fafbfc;border-top:1px solid #f3f4f6;">'+(l.sendHistory||[]).slice().reverse().map(function(h,i){return '<div style="font-size:12px;color:#777;padding:1px 0;">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+dmFmt(h.ts,h.sentAt)+'</div>';}).join('')+'</div>':'';
+        return '<div style="'+cols+'height:46px;border-top:1px solid #eef0f3;font-size:13px;">'
+          +'<button onclick="toggleDMHist(\''+eid+'\')" style="border:0;background:none;padding:0;text-align:left;font-weight:600;font-size:13px;color:#222;cursor:pointer;font-family:inherit;">'+escHTML(l.name)+'</button>'
+          +'<span style="color:#666;">'+dmFmt(l.lastSentTs,l.lastSentAt)+'</span><span style="color:#666;">'+n+'회</span><span>'+dmChip(x.st)+'</span>'
+          +(x.st!=='done'?'<button class="btn btn-outline btn-sm" onclick="resendDM(\''+en+'\')">재발송</button>':'<span></span>')+'</div>'+hist;
+      }).join('');
+    }
+    return '<div style="border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;background:#fff;">'+head+body+'</div>';
+  }).join('');
+}
+
+function resendDM(e){
+  var name=decodeURIComponent(e), l=findDMLog(name);
+  if(!l)return;
+  if(!l.slackUserId){closeDMLogModal();openSurveyDMModal(name,'',l.team||'');showToast('ℹ️ Slack User ID를 입력하면 재발송돼요');return;}
+  if(!confirm(name+' 님께 설문 DM을 다시 보낼까요?'))return;
+  sendDMRequest(name,l.slackUserId,l.team).then(function(ok){showToast(ok?'✅ '+name+' 님께 재발송했어요':'❌ 재발송에 실패했어요');});
+}
+
+function bulkResendDM(){
+  var targets=dmBase().filter(function(x){return x.st!=='done'&&x.log.slackUserId;});
+  var skipped=dmBase().filter(function(x){return x.st!=='done'&&!x.log.slackUserId;}).length;
+  if(!targets.length){showToast('⚠️ 일괄 재발송할 수 있는 대상이 없어요 (Slack ID 없음 '+skipped+'명)');return;}
+  if(!confirm('미응답 '+targets.length+'명에게 설문 DM을 다시 보낼까요?'+(skipped?'\n(Slack ID가 없는 '+skipped+'명은 제외됩니다)':'')))return;
+  var ok=0,fail=0;
+  targets.reduce(function(p,x){
+    return p.then(function(){return sendDMRequest(x.log.name,x.log.slackUserId,x.log.team).then(function(r){r?ok++:fail++;showToast('📨 발송 중... '+(ok+fail)+'/'+targets.length);});});
+  },Promise.resolve()).then(function(){showToast('✅ '+ok+'명 발송 완료'+(fail?' · 실패 '+fail+'명':''));});
 }
 
 function showToast(msg){
