@@ -15,6 +15,10 @@
   /* 헤더 카드 */
   .hero-card{background:linear-gradient(135deg,#7f77dd 0%,#a99fec 100%);border-radius:20px;padding:2rem 2rem 1.75rem;margin-bottom:1rem;color:#fff;}
   .hero-tag{display:inline-block;background:rgba(255,255,255,0.2);font-size:11px;font-weight:600;letter-spacing:1px;padding:4px 12px;border-radius:100px;margin-bottom:14px;}
+  .hero-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .hero-top .hero-tag{margin-bottom:0;}
+  .host-badge{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#4a43a8;font-size:12px;font-weight:700;padding:3px 12px 3px 4px;border-radius:100px;}
+  .host-badge .av{width:22px;height:22px;border-radius:50%;background:#6a62cf;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
   .hero-card h1{font-size:24px;font-weight:700;margin-bottom:10px;line-height:1.3;}
   .hero-card p{font-size:14px;line-height:1.8;opacity:0.9;}
 
@@ -88,7 +92,10 @@
     </div>
     <!-- 히어로 헤더 -->
     <div class="hero-card">
-      <div class="hero-tag">1 on 1</div>
+      <div class="hero-top">
+        <div class="hero-tag">1 on 1</div>
+        <div class="host-badge"><span class="av">혜</span>혜민과 함께해요</div>
+      </div>
       <h1>우리 편하게 이야기 나누어요. 😊<br>원온원 일정을 알려주세요!</h1>
       <p>서로 편한 시간에 이야기 나눌 수 있도록<br>희망 일정을 알려주시면 맞춰서 연락드릴게요.<br>가능한 날짜와 시간대를 넉넉하게 골라주시면 더 좋아요 🙌</p>
     </div>
@@ -108,7 +115,7 @@
           <label class="chip"><input type="radio" name="team" value="Biz팀"><span>Biz팀</span></label>
           <label class="chip"><input type="radio" name="team" value="프로덕트팀"><span>프로덕트팀</span></label>
           <label class="chip"><input type="radio" name="team" value="커머스팀"><span>커머스팀</span></label>
-                  <label class="chip"><input type="radio" name="team" value="마에팅팀"><span>마에팅팀</span></label>
+                  <label class="chip"><input type="radio" name="team" value="마에팅팀(GA팀)"><span>마에팅팀(GA팀)</span></label>
           <label class="chip"><input type="radio" name="team" value="브랜드팀"><span>브랜드팀</span></label>
         </div>
       </div>
@@ -153,7 +160,7 @@
     <div class="success">
       <div class="icon">🎉</div>
       <h2>고마워요, 잘 받았어요!</h2>
-      <p>소중한 의견 남겨주셔서 감사해요 😊<br>일정 확인 후 개별로 연락드릴게요.<br>곧 만나요!</p>
+      <p>소중한 의견 남겨주셔서 감사해요 😊<br>혜민이 일정을 확인한 뒤 개별로 연락드릴게요.<br>곧 만나요!</p>
       <span class="again-btn" onclick="resetForm()">다시 제출하기</span>
     </div>
   </div>
