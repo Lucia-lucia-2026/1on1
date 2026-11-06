@@ -108,6 +108,7 @@ tr:hover td{background:#fdfdff;}
   </select>
   <button class="btn btn-primary btn-sm" onclick="exportCSV()">CSV 내보내기</button>
   <button class="btn btn-outline btn-sm" onclick="openSurveyDMModal()" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
+  <button class="btn btn-outline btn-sm" onclick="openDMLogModal()">📋 DM 발송내역</button>
   <button class="btn btn-danger btn-sm" onclick="clearAll()">전체 삭제</button>
 </div>
 
@@ -161,6 +162,18 @@ tr:hover td{background:#fdfdff;}
   </div>
 </div>
 
+<!-- 설문 DM 발송내역 모달 -->
+<div class="modal-bg" id="modal-dm-log">
+  <div class="modal" style="max-width:520px;">
+    <h2>📋 설문 DM 발송내역</h2>
+    <p class="modal-sub">팀원별로 설문지 DM을 보낸 시각이 기록됩니다.</p>
+    <div id="dm-log-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDMLogModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -168,6 +181,7 @@ var PW = 'admin1234';
 var API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
 var TEAM_CLASS = {'Biz팀':'b-biz','프로덕트팀':'b-product','커머스팀':'b-commerce','마케팅팀':'b-marketing','마에팅팀':'b-me','브랜드팀':'b-brand'};
 var surveys = [];
+var dmLogs = [];   // 설문 DM 발송 기록 (type:'dmLog')
 var currentId = null;
 
 function getTeamClass(team){return TEAM_CLASS[team]||'b-me';}
@@ -202,7 +216,9 @@ function api(params){
 
 function loadSurveys(){
   api({action:'getSurveys'}).then(function(res){
-    surveys=res&&res.surveys?res.surveys:[];
+    var all=res&&res.surveys?res.surveys:[];
+    dmLogs=all.filter(function(r){return r.type==='dmLog';});
+    surveys=all.filter(function(r){return r.type!=='dmLog';});
     renderStats();
     render();
   });
@@ -251,7 +267,7 @@ function render(){
         +'</div>'
       :'<button class="confirm-btn" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',false)">일정 확정 →</button>';
     return '<tr>'
-      +'<td><strong>'+r.name+'</strong></td>'
+      +'<td><strong>'+r.name+'</strong>'+dmHintHTML(r.name)+'</td>'
       +'<td><span class="badge '+tc+'">'+r.team+'</span></td>'
       +'<td><div class="tag-wrap">'+dates+'</div></td>'
       +'<td><div class="tag-wrap">'+times+'</div></td>'
@@ -345,7 +361,15 @@ function deleteRow(id){
 
 function clearAll(){
   if(!confirm('모든 응답을 삭제할까요?'))return;
-  api({action:'clearSurveys'}).then(function(){loadSurveys();});
+  if(!dmLogs.length){
+    api({action:'clearSurveys'}).then(function(){loadSurveys();});
+    return;
+  }
+  // DM 발송내역은 남기고 설문 응답만 삭제
+  var ids=surveys.map(function(r){return String(r.id);});
+  ids.reduce(function(p,id){
+    return p.then(function(){return api({action:'deleteSurvey',id:id});});
+  },Promise.resolve()).then(function(){loadSurveys();showToast('🗑️ 응답이 삭제되었습니다 (DM 발송내역은 유지)');});
 }
 
 function exportCSV(){
@@ -386,10 +410,67 @@ function sendSurveyDM(){
     if(res&&res.success){
       closeSurveyDMModal();
       showToast('✅ '+name+' 님께 설문지 DM이 발송되었습니다!');
+      recordDMLog(name);
     } else {
       showToast('❌ 발송 실패: '+(res&&res.error?res.error:'다시 시도해 주세요'));
     }
   });
+}
+
+function escHTML(v){
+  return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function findDMLog(name){
+  var id='dm_'+name;
+  return dmLogs.filter(function(l){return String(l.id)===id;})[0];
+}
+
+function dmHintHTML(name){
+  var log=findDMLog(name);
+  if(!log||!log.lastSentAt)return '';
+  return '<div style="font-size:11px;color:#2D7CD2;margin-top:3px;font-weight:400;">📨 설문 DM '+escHTML(log.lastSentAt)+'</div>';
+}
+
+// 설문 DM 발송 시각을 팀원별로 누적 기록 (Google Drive에 저장)
+function recordDMLog(name){
+  var now=new Date();
+  var sentAt=now.toLocaleString('ko-KR');
+  var prev=findDMLog(name);
+  var history=prev&&prev.sendHistory?prev.sendHistory.slice():[];
+  history.push({sentAt:sentAt,ts:now.getTime()});
+  var record={id:'dm_'+name,type:'dmLog',name:name,sendHistory:history,lastSentAt:sentAt,lastSentTs:now.getTime()};
+  api({action:'saveSurvey',survey:JSON.stringify(record)}).then(function(res){
+    if(res&&res.success){
+      dmLogs=dmLogs.filter(function(l){return String(l.id)!==record.id;});
+      dmLogs.push(record);
+      render();
+    } else {
+      showToast('⚠️ DM은 발송됐지만 발송 시각 기록에 실패했어요');
+    }
+  });
+}
+
+function openDMLogModal(){
+  var body=document.getElementById('dm-log-body');
+  if(!dmLogs.length){
+    body.innerHTML='<div style="text-align:center;color:#bbb;padding:2rem 0;font-size:13px;">아직 발송 기록이 없습니다.</div>';
+  } else {
+    var rows=dmLogs.slice().sort(function(a,b){return (b.lastSentTs||0)-(a.lastSentTs||0);}).map(function(l){
+      var hist=(l.sendHistory||[]).slice().reverse().map(function(h,i){
+        return '<div style="font-size:11px;color:#aaa;padding:1px 0;">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+escHTML(h.sentAt)+'</div>';
+      }).join('');
+      return '<tr><td><strong>'+escHTML(l.name)+'</strong></td>'
+        +'<td>'+hist+'</td>'
+        +'<td style="white-space:nowrap;">'+(l.sendHistory?l.sendHistory.length:0)+'회</td></tr>';
+    }).join('');
+    body.innerHTML='<table><thead><tr><th>이름</th><th>발송 시각</th><th>횟수</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+  document.getElementById('modal-dm-log').style.display='flex';
+}
+
+function closeDMLogModal(){
+  document.getElementById('modal-dm-log').style.display='none';
 }
 
 function showToast(msg){
@@ -400,6 +481,7 @@ function showToast(msg){
 
 document.getElementById('modal-confirm').onclick=function(e){if(e.target===this)closeConfirmModal();};
 document.getElementById('modal-survey-dm').onclick=function(e){if(e.target===this)closeSurveyDMModal();};
+document.getElementById('modal-dm-log').onclick=function(e){if(e.target===this)closeDMLogModal();};
 </script>
 </body>
 </html>
