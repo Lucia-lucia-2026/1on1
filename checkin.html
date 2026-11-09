@@ -195,7 +195,7 @@ function submitForm(){
 
 /* ── 시작 ── */
 (function init(){
-  if(!SID||!TOKEN){showMessage('🔗','유효하지 않은 링크예요','Slack이나 이메일로 받은 “원온원 메모 남기기” 링크로 접속해 주세요.');return;}
+  if(!SID||!TOKEN){showMessage('🔗','유효하지 않은 링크예요','Slack이나 이메일로 받은 “원온원 전 컨디션 체크하기” 링크로 접속해 주세요.');return;}
   call('getCheckin',{sid:SID,t:TOKEN}).then(function(res){
     if(!res){showMessage('📡','연결하지 못했어요','잠시 후 다시 시도해 주세요.');return;}
     if(res.error){showMessage('🔗','유효하지 않은 링크예요','링크가 바뀌었거나 일정이 변경되었을 수 있어요.<br>혜민에게 새 링크를 요청해 주세요.');return;}
