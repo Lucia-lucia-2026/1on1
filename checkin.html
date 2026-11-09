@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>원온원 체크인</title>
+<style>
+:root{
+  --base:#2D7CD2; --base-dark:#1f5fa8; --base-soft:#e8f1fb; --base-line:#c5dcf4;
+  --bg:#f0f4f9; --card:#fff; --ink:#1b2430; --sub:#7b8794; --line:#e6ebf1;
+  --ok:#2e7d32; --ok-bg:#e8f5e9; --warn:#9a5b00; --warn-bg:#fff1d6; --bad:#c62828;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#14171b; --card:#1d2127; --ink:#e9edf2; --sub:#9aa4b0; --line:#2b313a; --base-soft:#1b2c40; --base-line:#2c4968;
+    --ok:#8fd19a; --ok-bg:#1c3324; --warn:#ffd27a; --warn-bg:#3b2f12; --bad:#ff8f8f; }
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:20px 16px 48px;}
+.wrap{max-width:480px;margin:0 auto;}
+.brand{text-align:center;font-size:12px;color:var(--sub);margin-bottom:12px;}
+.hero{background:linear-gradient(135deg,#2D7CD2,#5aa0e6);color:#fff;border-radius:18px;padding:20px 20px 18px;margin-bottom:14px;}
+.hero b{font-size:18px;display:block;margin-bottom:6px;}
+.hero p{font-size:13px;line-height:1.8;opacity:.95;}
+.card{background:var(--card);border-radius:16px;padding:16px 16px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.card h2{font-size:14.5px;margin-bottom:4px;}
+.hint{font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px;}
+.moods{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.moods button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:9px 2px 7px;font-size:24px;line-height:1.2;color:var(--ink);cursor:pointer;font-family:inherit;}
+.moods button small{display:block;font-size:10.5px;color:var(--sub);margin-top:3px;}
+.moods button.on{border-color:var(--base);background:var(--base-soft);}
+.ag{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.5;}
+.ag:last-of-type{border-bottom:none;}
+.ag span:nth-child(2){flex:1;word-break:break-word;}
+.ag button{border:none;background:none;color:var(--sub);font-size:16px;cursor:pointer;padding:0 4px;}
+.addrow{display:flex;gap:6px;margin-top:8px;}
+input[type=text],textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none;}
+input[type=text]:focus,textarea:focus{border-color:var(--base);}
+textarea{min-height:84px;resize:vertical;line-height:1.6;}
+.count{font-size:11px;color:var(--sub);text-align:right;margin-top:3px;}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn.primary{background:var(--base);color:#fff;}
+.btn.ghost{background:var(--base-soft);color:var(--base-dark);}
+.btn:disabled{opacity:.6;cursor:default;}
+.submit{width:100%;padding:14px;font-size:15px;border-radius:13px;}
+.priv{background:var(--base-soft);border-radius:12px;padding:10px 13px;font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:14px;}
+.center{text-align:center;padding:30px 12px;}
+.center .big{font-size:48px;margin-bottom:12px;}
+.center h2{font-size:18px;margin-bottom:8px;}
+.center p{font-size:13px;color:var(--sub);line-height:1.8;}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:100px;background:var(--ok-bg);color:var(--ok);}
+.pill.warn{background:var(--warn-bg);color:var(--warn);}
+.sumrow{padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.7;}
+.sumrow:last-child{border-bottom:none;}
+.sumrow .lb{display:block;font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:2px;}
+.err{color:var(--bad);font-size:12.5px;margin:6px 0;min-height:18px;text-align:center;}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--base);border-radius:50%;animation:sp .8s linear infinite;margin:40px auto;}
+@keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">빌리지베이비</div>
+  <div id="root"><div class="spin"></div></div>
+</div>
+
+<script>
+var DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
+function apiUrl(){try{var s=localStorage.getItem('1on1_survey_api_url');if(s&&s.trim())return s.trim();}catch(e){}return DEFAULT_API_URL;}
+
+var MOODS=[['😟','힘들어요'],['😕','조금 지쳐요'],['😐','보통'],['🙂','괜찮아요'],['😄','좋아요']];
+var MAX_AGENDA=5, MAX_AGENDA_LEN=100, MAX_NOTE=500;
+var params=new URLSearchParams(location.search);
+var SID=params.get('s')||'', TOKEN=params.get('t')||'';
+var info=null;            // 서버에서 받은 일정·체크인 정보
+var form={mood:0,agenda:[],note:''};
+var editing=false, busy=false, formErr='';
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ── 서버 호출 (JSONP) ── */
+function call(action,extra,b64key){
+  return new Promise(function(resolve){
+    var cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
+    var q={action:action,callback:cb};
+    for(var k in extra)q[k]=extra[k];
+    if(b64key&&q[b64key])q[b64key]=btoa(unescape(encodeURIComponent(q[b64key])));
+    var s=document.createElement('script');
+    var timer=setTimeout(function(){cleanup();resolve(null);},20000);
+    function cleanup(){delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(timer);}
+    window[cb]=function(d){cleanup();resolve(d);};
+    s.onerror=function(){cleanup();resolve(null);};
+    s.src=apiUrl()+'?'+new URLSearchParams(q).toString();
+    document.head.appendChild(s);
+  });
+}
+
+/* ── 날짜 표시 ── */
+function fmtWhen(dt){
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(dt||''));
+  if(!m)return '';
+  var d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]), h=d.getHours();
+  return (d.getMonth()+1)+'/'+d.getDate()+' ('+['일','월','화','수','목','금','토'][d.getDay()]+') '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function fmtStamp(iso){
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso||''));
+  if(!m)return '';
+  var h=+m[4];
+  return (+m[2])+'/'+(+m[3])+' '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+m[5];
+}
+
+/* ── 화면 ── */
+function hero(){
+  return '<div class="hero"><b>'+esc(info.name)+'님, 원온원 준비해요 👋</b><p>📅 '+esc(fmtWhen(info.datetime))+(info.method?' · '+(info.method==='대면'?'🏢 대면':'💻 '+esc(info.method)):'')+'<br>혜민과 함께하는 원온원이에요</p></div>';
+}
+function summaryCard(c){
+  var ag=(c.agenda||[]);
+  return '<div class="card"><div class="sumrow"><span class="lb">요즘 컨디션</span>'+MOODS[c.mood-1][0]+' '+MOODS[c.mood-1][1]+'</div>'
+    +'<div class="sumrow"><span class="lb">이야기하고 싶은 것</span>'+(ag.length?ag.map(function(a){return '📌 '+esc(a);}).join('<br>'):'<span style="color:var(--sub)">적은 안건이 없어요</span>')+'</div>'
+    +(c.note?'<div class="sumrow"><span class="lb">혜민에게 한마디</span>'+esc(c.note).replace(/\n/g,'<br>')+'</div>':'')+'</div>';
+}
+function render(){
+  var root=$('root');
+  if(!info){return;}
+  var c=info.checkin;
+  if(!info.open){
+    root.innerHTML=hero()+(c
+      ? '<div class="card"><h2>체크인 기간이 끝났어요</h2><div class="hint">원온원 전날까지만 작성·수정할 수 있어요. 제출하신 내용은 혜민이 확인해요.</div></div>'+summaryCard(c)
+      : '<div class="card center" style="padding:24px 12px;"><div class="big">⏳</div><h2>체크인 기간이 끝났어요</h2><p>체크인은 원온원 전날까지 작성할 수 있어요.<br>이야기하고 싶은 내용은 원온원에서 편하게 말씀해 주세요.</p></div>');
+    return;
+  }
+  if(c&&!editing){
+    root.innerHTML=hero()
+      +'<div class="center" style="padding:6px 0 14px;"><div class="big">🎉</div><h2>체크인 고마워요!</h2><p>혜민이 원온원 전에 확인할게요.<br><b>'+esc(info.deadlineText)+'</b>까지 언제든 수정할 수 있어요.</p></div>'
+      +summaryCard(c)
+      +'<div style="text-align:center;font-size:12px;color:var(--sub);margin-bottom:12px;">'+(c.editCount>0?'<span class="pill warn">✏️ 수정 '+c.editCount+'회 · '+esc(fmtStamp(c.editedAt))+'</span>':'<span class="pill">✓ '+esc(fmtStamp(c.submittedAt))+' 제출</span>')+'</div>'
+      +'<button class="btn ghost submit" onclick="startEdit()">내용 수정하기</button>';
+    return;
+  }
+  var agList=form.agenda.map(function(a,i){return '<div class="ag"><span>📌</span><span>'+esc(a)+'</span><button type="button" aria-label="삭제" onclick="removeAgenda('+i+')">✕</button></div>';}).join('')
+    ||'<div class="hint" style="margin:4px 0 0;">아직 적은 안건이 없어요</div>';
+  var full=form.agenda.length>=MAX_AGENDA;
+  root.innerHTML=hero()
+    +'<div class="card"><h2>1. 요즘 컨디션은 어때요?</h2><div class="hint">솔직하게 골라 주세요. 정답은 없어요.</div><div class="moods">'
+      +MOODS.map(function(m,i){return '<button type="button" class="'+(form.mood===i+1?'on':'')+'" onclick="setMood('+(i+1)+')">'+m[0]+'<small>'+m[1]+'</small></button>';}).join('')+'</div></div>'
+    +'<div class="card"><h2>2. 원온원에서 이야기하고 싶은 것</h2><div class="hint">업무, 성장, 고민, 건의 무엇이든 좋아요. 최대 '+MAX_AGENDA+'개까지 적을 수 있어요. (선택)</div>'
+      +agList
+      +'<div class="addrow"><input type="text" id="ag-in" maxlength="'+MAX_AGENDA_LEN+'" placeholder="'+(full?'안건은 최대 '+MAX_AGENDA+'개예요':'예: 다음 분기 업무 범위')+'" '+(full?'disabled':'')+' onkeydown="if(event.key===\'Enter\'){event.preventDefault();addAgenda();}"><button type="button" class="btn primary" onclick="addAgenda()" '+(full?'disabled':'')+'>추가</button></div></div>'
+    +'<div class="card"><h2>3. 혜민에게 한마디 <span style="font-weight:400;color:var(--sub);">(선택)</span></h2><textarea id="note" maxlength="'+MAX_NOTE+'" placeholder="미리 전하고 싶은 말이 있다면 적어 주세요" oninput="onNote()">'+esc(form.note)+'</textarea><div class="count" id="cnt">'+form.note.length+' / '+MAX_NOTE+'</div></div>'
+    +'<div class="priv">🔒 적어 주신 내용은 <b>혜민에게만</b> 보여요. 다른 팀원에게는 공유되지 않아요.<br>'+esc(info.deadlineText)+'까지 작성하고, 그 전에는 언제든 수정할 수 있어요.</div>'
+    +'<div class="err" id="err">'+esc(formErr)+'</div>'
+    +'<button type="button" class="btn primary submit" id="submit" onclick="submitForm()" '+(busy?'disabled':'')+'>'+(busy?'저장 중...':(c?'수정 저장하기':'체크인 제출하기'))+'</button>'
+    +(c?'<button type="button" class="btn ghost submit" style="margin-top:8px;" onclick="cancelEdit()">취소</button>':'');
+}
+function showMessage(emoji,title,text){
+  $('root').innerHTML='<div class="card center"><div class="big">'+emoji+'</div><h2>'+esc(title)+'</h2><p>'+text+'</p></div>';
+}
+
+/* ── 입력 처리 ── */
+function setMood(v){form.mood=v;formErr='';render();}
+function addAgenda(){
+  var el=$('ag-in');var v=(el.value||'').trim();
+  if(!v)return;
+  if(form.agenda.length>=MAX_AGENDA)return;
+  form.agenda.push(v.slice(0,MAX_AGENDA_LEN));
+  render();var n=$('ag-in');if(n&&!n.disabled)n.focus();
+}
+function removeAgenda(i){form.agenda.splice(i,1);render();}
+function onNote(){form.note=$('note').value;$('cnt').textContent=form.note.length+' / '+MAX_NOTE;}
+function startEdit(){
+  var c=info.checkin;form={mood:c.mood,agenda:(c.agenda||[]).slice(),note:c.note||''};editing=true;formErr='';render();window.scrollTo(0,0);
+}
+function cancelEdit(){editing=false;formErr='';render();}
+
+function submitForm(){
+  if(busy)return;
+  var pending=$('ag-in')?($('ag-in').value||'').trim():'';
+  if(pending&&form.agenda.length<MAX_AGENDA){form.agenda.push(pending.slice(0,MAX_AGENDA_LEN));}   // 입력만 하고 '추가'를 안 누른 안건도 포함
+  if(!form.mood){formErr='컨디션을 골라 주세요';render();return;}
+  busy=true;formErr='';render();
+  call('saveCheckin',{data:JSON.stringify({sid:SID,t:TOKEN,mood:form.mood,agenda:form.agenda,note:form.note})},'data').then(function(res){
+    busy=false;
+    if(res&&res.success){
+      info.checkin=res.checkin;editing=false;render();window.scrollTo(0,0);
+    } else if(res&&res.error==='Expired'){
+      info.open=false;editing=false;render();
+    } else if(res&&res.error==='Invalid link'){
+      showMessage('🔗','유효하지 않은 링크예요','링크가 바뀌었거나 일정이 변경되었을 수 있어요.<br>혜민에게 새 링크를 요청해 주세요.');
+    } else {
+      formErr=(res&&res.error)?res.error:'저장하지 못했어요. 잠시 후 다시 시도해 주세요.';render();
+    }
+  });
+}
+
+/* ── 시작 ── */
+(function init(){
+  if(!SID||!TOKEN){showMessage('🔗','유효하지 않은 링크예요','Slack이나 이메일로 받은 “원온원 준비하기” 링크로 접속해 주세요.');return;}
+  call('getCheckin',{sid:SID,t:TOKEN}).then(function(res){
+    if(!res){showMessage('📡','연결하지 못했어요','잠시 후 다시 시도해 주세요.');return;}
+    if(res.error){showMessage('🔗','유효하지 않은 링크예요','링크가 바뀌었거나 일정이 변경되었을 수 있어요.<br>혜민에게 새 링크를 요청해 주세요.');return;}
+    info=res;
+    if(res.checkin)form={mood:res.checkin.mood,agenda:(res.checkin.agenda||[]).slice(),note:res.checkin.note||''};
+    render();
+  });
+})();
+</script>
+</body>
+</html>
