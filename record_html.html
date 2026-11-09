@@ -164,6 +164,19 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
 .act-big .ab-meta{font-size:12px;color:#999;margin-top:2px;}
 .act-big .ab-meta a{color:#2D7CD2;cursor:pointer;font-weight:600;}
 
+/* 팀원 셀프 체크인 */
+.ci-chip{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;background:#e8f5e9;color:#2e7d32;cursor:pointer;white-space:nowrap;margin-top:3px;}
+.ci-chip.edited{background:#fff1d6;color:#9a5b00;}
+.ci-chip.wait{background:#eef0f4;color:#667;cursor:default;}
+.ci-new{display:inline-block;font-size:9.5px;font-weight:800;color:#fff;background:#e8590c;border-radius:5px;padding:0 5px;margin-left:3px;vertical-align:1px;}
+.ci-box{background:#eef5fd;border:1px solid #c5dcf4;border-radius:12px;padding:12px 14px;margin-bottom:1.25rem;}
+.ci-box .t{font-size:13px;font-weight:800;margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.ci-box .li{font-size:13px;line-height:1.7;}
+.ci-box .li b{color:#7b8794;font-weight:700;font-size:12px;margin-right:4px;}
+.ci-diff{background:#fff8e1;border-radius:10px;padding:9px 12px;font-size:12.5px;line-height:1.7;margin:10px 0;}
+.ci-diff .add{color:#2e7d32;} .ci-diff .del{color:#c62828;text-decoration:line-through;}
+.ci-row-detail{margin-bottom:12px;} .ci-row-detail .lb{display:block;font-size:11.5px;font-weight:700;color:#999;margin-bottom:3px;}
+
 /* 모달 공통 */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;}
 .modal-bg.open{display:flex;}
@@ -255,7 +268,8 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
   <div class="modal">
     <h2 id="record-modal-title">원온원 기록 추가</h2>
     <input type="hidden" id="edit-id">
-    <div class="field"><label>원온원 일시 *</label><input type="datetime-local" id="f-datetime"></div>
+    <div id="f-checkin-box"></div>
+    <div class="field"><label>원온원 일시 *</label><input type="datetime-local" id="f-datetime" onchange="updateCheckinBox()"></div>
     <div class="field">
       <label>원온원 방식</label>
       <select id="f-method">
@@ -293,6 +307,19 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeRecordModal()">취소</button>
       <button class="btn btn-primary" id="save-record-btn" onclick="saveRecord()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀원 셀프 체크인 상세 모달 -->
+<div class="modal-bg" id="modal-checkin">
+  <div class="modal" style="max-width:520px;">
+    <h2>📝 팀원 셀프 체크인</h2>
+    <p id="ci-sub" style="font-size:13px;color:#888;line-height:1.6;margin:-0.75rem 0 1.25rem;"></p>
+    <div id="ci-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeCheckin()">닫기</button>
+      <button class="btn btn-primary" id="ci-start" style="display:none;" onclick="startFromCheckin()">기록 시작</button>
     </div>
   </div>
 </div>
@@ -484,6 +511,7 @@ function enterApp(){
   renderMain();
   loadAllFromSheet();
   loadSlackDirectory();
+  loadCheckins();
 }
 
 // 비밀번호는 서버가 확인합니다 (맞으면 이번 접속 동안만 기억)
@@ -578,6 +606,7 @@ function getSurveyApiUrl(){const s=localStorage.getItem(SURVEY_API_URL_KEY);retu
 function surveyApi(params){
   return new Promise((resolve)=>{
     const enc={...params};
+    if(adminKey&&enc.key===undefined)enc.key=adminKey;   // 설문 서버에 관리자 키가 설정돼 있으면 필요 (기록 서버와 같은 값)
     if(enc.survey){try{enc.survey=btoa(unescape(encodeURIComponent(enc.survey)));}catch(e){resolve(null);return;}}
     const cb='scb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
     const qs=new URLSearchParams({...enc,callback:cb}).toString();
@@ -595,7 +624,7 @@ function surveyApi(params){
 let slackDir={}, slackContacts={};
 async function loadSlackDirectory(){
   const res=await surveyApi({action:'getSurveys'});
-  if(!res||!Array.isArray(res.surveys)){schedLoaded='fail';if(viewMode==='dash')renderMain();return;}
+  if(!res||!Array.isArray(res.surveys)){schedLoaded=(res&&res.error==='Unauthorized')?'auth':'fail';if(viewMode==='dash')renderMain();return;}
   const d={}, c={}, nm=v=>String(v||'').trim();
   res.surveys.forEach(r=>{if(r.type==='contact'&&nm(r.name)){c[nm(r.name)]=r;if(r.slackUserId)d[nm(r.name)]=r.slackUserId;}});
   res.surveys.forEach(r=>{if(r.type==='dmLog'&&nm(r.name)&&r.slackUserId&&!d[nm(r.name)])d[nm(r.name)]=r.slackUserId;});
@@ -604,10 +633,110 @@ async function loadSlackDirectory(){
   // 일정 확정한 응답 → 예정된 원온원 목록
   scheduleList=res.surveys.filter(r=>!r.type&&r.confirmed&&nm(r.name)).map(r=>{
     const h=Array.isArray(r.sendHistory)&&r.sendHistory.length?r.sendHistory[r.sendHistory.length-1]:null;
-    return {id:String(r.id),name:nm(r.name),dt:String(r.confirmedDatetime||(h&&h.datetime)||''),method:r.confirmedMethod||(h&&h.method)||r.method||''};
+    return {id:String(r.id),name:nm(r.name),dt:String(r.confirmedDatetime||(h&&h.datetime)||''),method:r.confirmedMethod||(h&&h.method)||r.method||'',checkinState:r.checkinState||''};
   }).filter(x=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(x.dt));
   schedLoaded=true;
   if(viewMode==='dash')renderMain();
+}
+
+// ── 팀원 셀프 체크인 (설문 서버에서 읽어옴) ──
+let checkins=[], boxSid=null, curCheckinSid='', pendingSid=null, ciOpenSid=null;
+const CI_MOODS=['힘들어요','조금 지쳐요','보통','괜찮아요','좋아요'];
+async function loadCheckins(){
+  const res=await surveyApi({action:'listCheckins'});
+  if(res&&Array.isArray(res.checkins)){checkins=res.checkins;if(viewMode==='dash'||viewMode==='member')renderMain();}
+}
+function ciOf(sid){return checkins.find(c=>String(c.sid)===String(sid));}
+function ciSeenMap(){try{return JSON.parse(localStorage.getItem('1on1_ci_seen')||'{}');}catch(e){return {};}}
+function ciStamp(c){return c.editedAt||c.submittedAt||'';}
+function ciIsNew(c){return (ciSeenMap()[String(c.sid)]||'')<ciStamp(c);}   // 마지막으로 열어 본 뒤 새로 제출·수정된 체크인
+function ciMarkSeen(c){const m=ciSeenMap();m[String(c.sid)]=ciStamp(c);try{localStorage.setItem('1on1_ci_seen',JSON.stringify(m));}catch(e){}}
+function ciStampText(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso||''));
+  if(!m)return '';
+  const h=+m[4];return (+m[2])+'/'+(+m[3])+' '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+m[5];
+}
+function ciChipHTML(c,sched){
+  if(c){
+    const edited=c.editCount>0;
+    return `<span class="ci-chip${edited?' edited':''}" onclick='openCheckin(${JSON.stringify(String(c.sid))})' title="눌러서 체크인 내용 보기">📝 체크인 완료 · ${MOOD_ICONS[c.mood-1]||''} · 안건 ${(c.agenda||[]).length}${edited?' · ✏️ 수정 '+c.editCount+'회':''}${ciIsNew(c)?'<b class="ci-new">NEW</b>':''}</span>`;
+  }
+  if(sched&&sched.checkinState==='ok')return '<span class="ci-chip wait">📝 체크인 대기</span>';
+  return '';
+}
+// 체크인 내용 (수정했다면 바뀐 부분 강조)
+function ciDetailHTML(c){
+  const ag=c.agenda||[];
+  let h=`<div class="ci-row-detail"><span class="lb">요즘 컨디션 (팀원이 직접 선택)</span>${MOOD_ICONS[c.mood-1]||''} ${esc(CI_MOODS[c.mood-1]||'')}</div>`
+    +`<div class="ci-row-detail"><span class="lb">이야기하고 싶은 것</span>${ag.length?ag.map(a=>'📌 '+esc(a)).join('<br>'):'<span style="color:#bbb">적은 안건이 없어요</span>'}</div>`
+    +(c.note?`<div class="ci-row-detail"><span class="lb">한마디</span>${esc(c.note)}</div>`:'');
+  if(c.editCount>0&&c.prev){
+    const pa=c.prev.agenda||[], added=ag.filter(a=>!pa.includes(a)), removed=pa.filter(a=>!ag.includes(a));
+    const lines=[];
+    if(c.prev.mood!==c.mood)lines.push(`컨디션: <span class="del">${MOOD_ICONS[c.prev.mood-1]||''} ${esc(CI_MOODS[c.prev.mood-1]||'')}</span> → <span class="add">${MOOD_ICONS[c.mood-1]||''} ${esc(CI_MOODS[c.mood-1]||'')}</span>`);
+    added.forEach(a=>lines.push(`<span class="add">+ 안건 추가: ${esc(a)}</span>`));
+    removed.forEach(a=>lines.push(`<span class="del">안건 삭제: ${esc(a)}</span>`));
+    if((c.prev.note||'')!==(c.note||''))lines.push(`한마디: <span class="del">${esc(c.prev.note||'(없음)')}</span> → <span class="add">${esc(c.note||'(없음)')}</span>`);
+    h=`<div class="ci-diff"><b>✏️ ${c.editCount}회 수정됨</b> · 마지막 수정 ${esc(ciStampText(c.editedAt))} · 바뀐 항목: ${esc((c.changes||[]).join(', ')||'—')}${lines.length?'<br>'+lines.join('<br>'):''}<div style="font-size:11px;color:#a08040;margin-top:4px;">바뀐 내용은 가장 최근 수정 기준이에요.</div></div>`+h;
+  }
+  return h;
+}
+function openCheckin(sid){
+  const c=ciOf(sid);if(!c)return;
+  ciOpenSid=String(sid);
+  const sc=scheduleList.find(x=>String(x.id)===String(sid));
+  document.getElementById('ci-sub').textContent=`${c.name} 님 · ${fmtSched(c.datetime)}${sc&&sc.method?' · '+sc.method:''} · ${ciStampText(c.submittedAt)} 제출`;
+  document.getElementById('ci-body').innerHTML=ciDetailHTML(c);
+  document.getElementById('ci-start').style.display='inline-block';
+  document.getElementById('modal-checkin').classList.add('open');
+  ciMarkSeen(c);
+  if(viewMode==='dash'||viewMode==='member')renderMain();   // NEW 표시 갱신
+}
+function closeCheckin(){document.getElementById('modal-checkin').classList.remove('open');}
+function startFromCheckin(){
+  const c=ciOf(ciOpenSid);if(!c)return;
+  closeCheckin();
+  const sc=scheduleList.find(x=>String(x.id)===String(c.sid));
+  startRecordFor(c.name,c.datetime,sc&&sc.method,c.sid);
+}
+// 개인 기록 화면: 이 팀원의 체크인 목록
+function memberCheckinsHTML(name){
+  const list=checkins.filter(c=>String(c.name).trim()===name).sort((a,b)=>String(b.datetime).localeCompare(String(a.datetime)));
+  if(!list.length)return '';
+  return `<div class="sec-title" style="margin-top:4px">📝 팀원 셀프 체크인 <small>${list.length}건 · 눌러서 내용 보기</small></div>
+    <div class="list-card">${list.map(c=>`<div class="list-row click" onclick='openCheckin(${JSON.stringify(String(c.sid))})'>
+      <div style="min-width:104px;font-weight:700;font-size:13px;line-height:1.4;">${esc(fmtSched(c.datetime))}</div>
+      <div class="lr-main"><div class="lr-sub">제출 ${esc(ciStampText(c.submittedAt))}${c.editCount>0?' · 수정 '+esc(ciStampText(c.editedAt)):''}</div></div>
+      ${ciChipHTML(c,null)}</div>`).join('')}</div>
+    <div class="sec-title">🕘 원온원 기록</div>`;
+}
+// 기록 작성 팝업 맨 위: 이 일정의 팀원 체크인
+function findCheckinFor(name,dtStr){
+  if(boxSid){const c=ciOf(boxSid);if(c)return c;}
+  const day=String(dtStr||'').slice(0,10);
+  if(!day)return null;
+  return checkins.find(c=>String(c.name).trim()===String(name||'').trim()&&String(c.datetime||'').slice(0,10)===day)||null;
+}
+function updateCheckinBox(){
+  const box=document.getElementById('f-checkin-box');
+  const c=selectedMember?findCheckinFor(selectedMember,document.getElementById('f-datetime').value):null;
+  curCheckinSid=c?String(c.sid):'';
+  if(!c){box.innerHTML='';return;}
+  ciMarkSeen(c);
+  box.innerHTML=`<div class="ci-box"><div class="t">📝 팀원 셀프 체크인 <span class="ci-chip" style="cursor:default;margin:0;">${esc(ciStampText(c.submittedAt))} 제출</span>${c.editCount>0?`<span class="ci-chip edited" style="cursor:default;margin:0;">✏️ 수정 ${c.editCount}회 · ${esc(ciStampText(c.editedAt))}</span>`:''}</div>
+    ${ciDetailHTML(c)}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn btn-outline btn-sm" onclick="importCheckinAgenda()">안건을 체크사항에 가져오기</button></div>
+    <div style="font-size:11.5px;color:#888;margin-top:8px;line-height:1.6;">팀원이 고른 컨디션은 참고용이에요. 아래 컨디션은 관리자가 직접 관찰한 값으로 따로 선택해 주세요.</div></div>`;
+}
+function importCheckinAgenda(){
+  const c=ciOf(curCheckinSid);if(!c)return;
+  const ag=c.agenda||[];
+  if(!ag.length){showToast('가져올 안건이 없어요');return;}
+  const el=document.getElementById('f-check');
+  const text='▪ 팀원 체크인 안건\n'+ag.map(a=>'  - '+a).join('\n');
+  if(el.value.includes('▪ 팀원 체크인 안건')){showToast('이미 가져왔어요');return;}
+  el.value=el.value.trim()?el.value.trim()+'\n\n'+text:text;
+  showToast('✅ 안건을 체크사항에 가져왔어요');
 }
 
 async function loadAllFromSheet(){
@@ -807,10 +936,10 @@ function renderMemberView(){
     <div class="stat-card"><div class="stat-num" style="font-size:16px;padding-top:4px;">${last}</div><div class="stat-label">마지막 원온원</div></div>${moodCardHTML(records)}`;
 
   if(!records.length){
-    area.innerHTML=`<div class="empty-state"><div class="icon">📝</div><p>${selectedMember} 님의 원온원 기록이 없어요.<br><strong>+ 기록 추가</strong>로 첫 기록을 남겨보세요!</p></div>`;
+    area.innerHTML=memberCheckinsHTML(selectedMember)+`<div class="empty-state"><div class="icon">📝</div><p>${selectedMember} 님의 원온원 기록이 없어요.<br><strong>+ 기록 추가</strong>로 첫 기록을 남겨보세요!</p></div>`;
     return;
   }
-  area.innerHTML=`<div class="records-wrap">${records.map(r=>cardHTML(r)).join('')}</div>`;
+  area.innerHTML=memberCheckinsHTML(selectedMember)+`<div class="records-wrap">${records.map(r=>cardHTML(r)).join('')}</div>`;
 }
 
 /* ═══════════ 1단계: 팀 묶음 · 통합 검색 · 태그 · 액션 체크 ═══════════ */
@@ -949,7 +1078,7 @@ function cardHTML(r,opt){
   return `<div class="record-card">
     <div class="record-card-header">
       <span class="record-date">📅 ${dt}${who}</span>
-      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${r.tpl?`<span class="tag-chip" style="background:#eef0f4;color:#556;">${esc(r.tpl)}</span>`:''}${r.mood?`<span title="컨디션 ${r.mood}/5 (관리자 관찰)" style="font-size:17px;">${MOOD_ICONS[r.mood-1]||''}</span>`:''}${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
+      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${(r.checkinSid&&ciOf(r.checkinSid))?`<span class="ci-chip${ciOf(r.checkinSid).editCount>0?' edited':''}" style="margin:0;" onclick='openCheckin(${JSON.stringify(String(r.checkinSid))})' title="팀원 체크인 보기">📝 체크인${ciOf(r.checkinSid).editCount>0?' · ✏️ 수정됨':''}</span>`:''}${r.tpl?`<span class="tag-chip" style="background:#eef0f4;color:#556;">${esc(r.tpl)}</span>`:''}${r.mood?`<span title="컨디션 ${r.mood}/5 (관리자 관찰)" style="font-size:17px;">${MOOD_ICONS[r.mood-1]||''}</span>`:''}${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
     </div>
     ${tags?`<div class="tag-row">${tags}</div>`:''}
     <div class="record-body">
@@ -1004,11 +1133,13 @@ function hasRecordOnDay(name,dt){
   return allRecords.some(r=>String(r.name||'').trim()===name&&String(r.datetime||'').slice(0,10)===day);
 }
 // 확정된 일정에서 바로 기록 작성 (팀원·일시·방식 자동 입력)
-function startRecordFor(name,dt,method){
+function startRecordFor(name,dt,method,sid){
   selectMember(name);
+  pendingSid=sid?String(sid):null;
   openRecordModal();
   if(dt)document.getElementById('f-datetime').value=String(dt).slice(0,16);
   if(method==='대면'||method==='비대면(게더)')document.getElementById('f-method').value=method;
+  updateCheckinBox();
 }
 function renderDash(){
   setHeader('대시보드','원온원이 잘 이어지고 있는지 한눈에 확인해요',false);
@@ -1028,6 +1159,7 @@ function renderDash(){
     .filter(x=>x.n!==null&&((x.n>=0)||(x.n<0&&x.n>=-14&&!x.rec)))
     .sort((a,b)=>new Date(a.dt)-new Date(b.dt));
   const upcomingN=sched.filter(x=>x.n>=0).length;
+  const newCiN=checkins.filter(ciIsNew).length;
   const latestMoods=rows.map(x=>({x,r:x.rs.find(r=>Number(r.mood)>0)})).filter(o=>o.r);
   const avgMood=latestMoods.length?(latestMoods.reduce((a,o)=>a+Number(o.r.mood),0)/latestMoods.length).toFixed(1):null;
   const lowMood=latestMoods.filter(o=>Number(o.r.mood)<=2);
@@ -1040,6 +1172,7 @@ function renderDash(){
   ]);
   let schedHTML;
   if(schedLoaded==='fail')schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>확정된 일정을 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p></div>';
+  else if(schedLoaded==='auth')schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>설문 서버가 관리자 키를 확인하지 못했어요. 기록 서버와 설문 서버의 ADMIN_KEY가 같은 값인지 확인해 주세요.</p></div>';
   else if(!schedLoaded)schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>확정된 일정을 불러오는 중이에요...</p></div>';
   else if(!sched.length)schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>예정된 원온원이 없어요. 일정 수집 관리에서 일정을 확정하면 여기에 나와요.</p></div>';
   else schedHTML=sched.map(x=>{
@@ -1048,9 +1181,9 @@ function renderDash(){
     return `<div class="list-row">
       <div style="min-width:104px;font-weight:700;font-size:13.5px;line-height:1.4;">${esc(fmtSched(x.dt))}</div>
       <div class="lr-main"><div class="lr-name">${esc(x.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(mem?mem.team+' · '+mem.role:'명단에 없음')}</span></div>
-        <div class="lr-sub">${x.method?esc(x.method):''}</div></div>
+        <div class="lr-sub">${x.method?esc(x.method):''}</div>${ciChipHTML(ciOf(x.id),x)}</div>
       ${dd}
-      <button class="btn btn-primary btn-sm" onclick='startRecordFor(${JSON.stringify(x.name)},${JSON.stringify(x.dt)},${JSON.stringify(x.method)})'>기록 시작</button>
+      <button class="btn btn-primary btn-sm" onclick='startRecordFor(${JSON.stringify(x.name)},${JSON.stringify(x.dt)},${JSON.stringify(x.method)},${JSON.stringify(x.id)})'>기록 시작</button>
     </div>`;
   }).join('');
   // 원온원 간격 (재직자만 · 오래된 순, 기록 없는 사람은 맨 뒤)
@@ -1065,7 +1198,7 @@ function renderDash(){
   const dueKey=x=>x.a.due?new Date(x.a.due+'T00:00').getTime():Infinity;
   const soon=openActs.slice().sort((a,b)=>dueKey(a)-dueKey(b)||new Date(b.r.datetime)-new Date(a.r.datetime)).slice(0,5);
   document.getElementById('records-area').innerHTML=`
-    <div class="sec-title" style="margin-top:4px">📅 예정된 원온원 <small>일정 수집·확정 페이지와 연동 · <a href="admin_html.html" target="_blank" style="color:#2D7CD2;">일정 수집 관리 열기</a></small></div>
+    <div class="sec-title" style="margin-top:4px">📅 예정된 원온원 <small>일정 수집·확정 페이지와 연동${newCiN?' · <b style="color:#e8590c">새 체크인·수정 '+newCiN+'건</b>':''} · <a href="admin_html.html" target="_blank" style="color:#2D7CD2;">일정 수집 관리 열기</a></small></div>
     <div class="list-card">${schedHTML}</div>
     <div class="sec-title">⏰ 원온원 간격 <small>재직자 · 오래된 순${gap.length>LIMIT?' · 상위 '+LIMIT+'명 (전체는 팀 현황에서)':''}</small></div>
     <div class="list-card">${gapHTML||'<div class="empty-state" style="padding:1.5rem 1rem"><p>재직 팀원이 없어요</p></div>'}</div>
@@ -1258,10 +1391,12 @@ function openRecordModal(id){
   const acts=cur?getActions(cur):[];
   if(acts.length)acts.forEach(a=>addActionRow(a));else addActionRow();
   curTags=cur&&Array.isArray(cur.tags)?[...cur.tags]:[];
+  boxSid=cur?(cur.checkinSid||null):pendingSid;pendingSid=null;
   renderTagPick();
   document.getElementById('f-tag-new').value='';
   curTpl=cur&&cur.tpl?cur.tpl:'';curMood=cur&&cur.mood?Number(cur.mood):0;lastTplText='';
   renderTplPick();renderMoodPick();
+  updateCheckinBox();
   document.getElementById('f-summary').checked=!id;   // 새 기록은 기본 체크 (발송 전 미리보기가 먼저 열려요)
   document.getElementById('modal-record').classList.add('open');
 }
@@ -1291,6 +1426,7 @@ async function saveRecord(){
     tags:[...curTags],
     tpl:curTpl,
     mood:curMood,
+    checkinSid:curCheckinSid||(prevRec&&prevRec.checkinSid)||'',   // 이 기록과 연결된 팀원 체크인
     note:document.getElementById('f-note').value.trim(),
     updatedAt:new Date().toLocaleString('ko-KR')
   };
@@ -1405,6 +1541,7 @@ function exportCSV(){
 document.getElementById('modal-record').addEventListener('click',function(e){if(e.target===this)closeRecordModal();});
 document.getElementById('modal-member').addEventListener('click',function(e){if(e.target===this)closeMemberModal();});
 document.getElementById('modal-summary').addEventListener('click',function(e){if(e.target===this)closeSummary();});
+document.getElementById('modal-checkin').addEventListener('click',function(e){if(e.target===this)closeCheckin();});
 autoLogin();
 </script>
 </body>
