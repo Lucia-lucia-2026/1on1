@@ -112,7 +112,7 @@ function fmtStamp(iso){
 
 /* ── 화면 ── */
 function hero(){
-  return '<div class="hero"><b>'+esc(info.name)+'님, 원온원 준비해요 👋</b><p>📅 '+esc(fmtWhen(info.datetime))+(info.method?' · '+(info.method==='대면'?'🏢 대면':'💻 '+esc(info.method)):'')+'<br>혜민과 함께하는 원온원이에요</p></div>';
+  return '<div class="hero"><b>'+esc(info.name)+'님, 요즘 어떠세요? 👋</b><p>📅 '+esc(fmtWhen(info.datetime))+(info.method?' · '+(info.method==='대면'?'🏢 대면':'💻 '+esc(info.method)):'')+'<br>혜민과 함께하는 원온원이에요</p></div>';
 }
 function summaryCard(c){
   var ag=(c.agenda||[]);
@@ -142,7 +142,7 @@ function render(){
     ||'<div class="hint" style="margin:4px 0 0;">아직 적은 안건이 없어요</div>';
   var full=form.agenda.length>=MAX_AGENDA;
   root.innerHTML=hero()
-    +'<div class="card"><h2>1. 요즘 컨디션은 어때요?</h2><div class="hint">솔직하게 골라 주세요. 정답은 없어요.</div><div class="moods">'
+    +'<div class="card"><h2>1. 요즘 컨디션은 어때요?</h2><div class="hint">솔직하게 골라 주세요. 정답은 없어요. 컨디션 체크는 꼭 해 주세요 🙏</div><div class="moods">'
       +MOODS.map(function(m,i){return '<button type="button" class="'+(form.mood===i+1?'on':'')+'" onclick="setMood('+(i+1)+')">'+m[0]+'<small>'+m[1]+'</small></button>';}).join('')+'</div></div>'
     +'<div class="card"><h2>2. 원온원에서 이야기하고 싶은 것</h2><div class="hint">업무, 성장, 고민, 건의 무엇이든 좋아요. 최대 '+MAX_AGENDA+'개까지 적을 수 있어요. (선택)</div>'
       +agList
@@ -195,7 +195,7 @@ function submitForm(){
 
 /* ── 시작 ── */
 (function init(){
-  if(!SID||!TOKEN){showMessage('🔗','유효하지 않은 링크예요','Slack이나 이메일로 받은 “원온원 준비하기” 링크로 접속해 주세요.');return;}
+  if(!SID||!TOKEN){showMessage('🔗','유효하지 않은 링크예요','Slack이나 이메일로 받은 “원온원 메모 남기기” 링크로 접속해 주세요.');return;}
   call('getCheckin',{sid:SID,t:TOKEN}).then(function(res){
     if(!res){showMessage('📡','연결하지 못했어요','잠시 후 다시 시도해 주세요.');return;}
     if(res.error){showMessage('🔗','유효하지 않은 링크예요','링크가 바뀌었거나 일정이 변경되었을 수 있어요.<br>혜민에게 새 링크를 요청해 주세요.');return;}
