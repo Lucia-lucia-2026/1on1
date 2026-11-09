@@ -141,7 +141,8 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
 .tc-avs{display:flex;}
 .tc-avs .member-avatar{width:26px;height:26px;font-size:11px;margin-right:-4px;border:2px solid #fff;}
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;white-space:nowrap;}
-.pill.ok{background:#e8f5e9;color:#2e7d32;} .pill.warn{background:#fff1d6;color:#9a5b00;} .pill.bad{background:#fdeaea;color:#c62828;} .pill.gray{background:#f0f0f0;color:#888;}
+.pill.ok{background:#e8f5e9;color:#2e7d32;} .pill.warn{background:#fff1d6;color:#9a5b00;} .pill.bad{background:#fdeaea;color:#c62828;} .pill.gray{background:#f0f0f0;color:#888;} .pill.leave{background:#e8f1fb;color:#1f5fa8;}
+.member-item.on-leave{opacity:.78;}
 .sec-title{font-size:14px;font-weight:700;margin:22px 0 10px;}
 .sec-title small{font-weight:400;color:#999;font-size:12px;margin-left:6px;}
 .list-card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:4px 18px;}
@@ -334,6 +335,13 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
         <option value="Etc">Etc</option>
       </select>
     </div>
+    <div class="field">
+      <label>상태</label>
+      <select id="m-status">
+        <option value="">재직</option>
+        <option value="leave">🍼 육아휴직</option>
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeMemberModal()">취소</button>
       <button class="btn btn-primary" onclick="saveMember()">저장하기</button>
@@ -357,38 +365,59 @@ const API_KEY = '1on1_api_url';
 const MEMBERS_KEY = '1on1_members';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyCkdDRoCcYtsdTiPdMPPOIXnpvxswY2Uy_JXzNz5DMzNPPUMav6bo17gvRxJ48-70U/exec';
 
+// 팀 명단 (빌리지베이비 팀 명단 기준: 이름·직무·팀·별명만 사용)
+// 명단이 바뀌면 MEMBERS_VER를 바꿔 주세요. 바뀐 버전으로 처음 접속할 때 팀원 목록이 이 명단으로 다시 설정돼요.
+const MEMBERS_VER_KEY = '1on1_members_ver';
+const MEMBERS_VER = '2026-11-roster-b';
 const DEFAULT_MEMBERS = [
-  {name:'이지현',role:'CX',team:'Biz Team'},
-  {name:'정채영',role:'Finance',team:'Biz Team'},
-  {name:'정혜민',role:'HR',team:'Biz Team'},
-  {name:'박나영',role:'Marketer',team:'Brand'},
-  {name:'안선우',role:'Designer',team:'Brand'},
-  {name:'이서현',role:'MD',team:'Brand'},
-  {name:'이우리',role:'Marketer',team:'Brand'},
-  {name:'임희선',role:'Designer',team:'Brand'},
-  {name:'임희진',role:'MD',team:'Brand'},
-  {name:'이종민',role:'MD',team:'Brand'},
-  {name:'이옥석',role:'CX',team:'Brand'},
-  {name:'김유리',role:'AMD',team:'Commerce'},
-  {name:'김태윤',role:'MD',team:'Commerce'},
-  {name:'이소현',role:'MD',team:'Commerce'},
-  {name:'조수민',role:'MD',team:'Commerce'},
+  {name:'이지현',role:'CX',team:'Biz팀'},
+  {name:'정채영',role:'Finance',team:'Biz팀'},
+  {name:'정혜민',role:'HR',team:'Biz팀'},
+  {name:'박나영',role:'Marketer',team:'브랜드팀',nick:'난요'},
+  {name:'안선우',role:'Designer',team:'브랜드팀'},
+  {name:'이서현',role:'MD',team:'브랜드팀'},
+  {name:'이우리',role:'Marketer',team:'브랜드팀'},
+  {name:'이종민',role:'MD',team:'브랜드팀'},
+  {name:'이혜진',role:'CX',team:'브랜드팀'},
+  {name:'임희진',role:'MD',team:'브랜드팀',nick:'Elin'},
+  {name:'전혜린',role:'Designer',team:'브랜드팀',nick:'Lynn'},
+  {name:'이소현',role:'MD',team:'커머스팀'},
+  {name:'조수민',role:'MD',team:'커머스팀'},
+  {name:'최지민',role:'MD',team:'커머스팀'},
+  {name:'채지민',role:'AMD',team:'커머스팀',nick:'Lydia'},
+  {name:'안연주',role:'Marketer',team:'마에팅팀(GA팀)'},
+  {name:'김영웅',role:'Ad Sales Manager',team:'마에팅팀(GA팀)'},
+  {name:'박고은',role:'Marketer',team:'마에팅팀(GA팀)',nick:'고니'},
+  {name:'박소영',role:'Marketer',team:'마에팅팀(GA팀)',nick:'폴샤'},
+  {name:'이상화',role:'Support',team:'마에팅팀(GA팀)'},
+  {name:'이혜린',role:'Designer',team:'마에팅팀(GA팀)'},
+  {name:'오한나',role:'Editor',team:'마에팅팀(GA팀)',status:'leave'},
+  {name:'홍찬주',role:'Ad Manager',team:'마에팅팀(GA팀)',status:'leave'},
+  {name:'안영주',role:'UX Designer',team:'프로덕트팀'},
+  {name:'문혁은',role:'Engineer',team:'프로덕트팀'},
+  {name:'유진수',role:'Engineer',team:'프로덕트팀'},
+  {name:'정수형',role:'Engineer',team:'프로덕트팀',nick:'Soo'},
+  {name:'최제혁',role:'Engineer',team:'프로덕트팀'},
+  {name:'윤혜준',role:'Staff - QA',team:'프로덕트팀'},
+  {name:'김다은',role:'Engineer',team:'프로덕트팀',status:'leave'},
+  {name:'임소정',role:'Engineer',team:'프로덕트팀',status:'leave'},
   {name:'이정윤',role:'CEO',team:'Etc'},
-  {name:'박소영',role:'Marketer',team:'M&E'},
-  {name:'박고은',role:'Marketer',team:'M&E'},
-  {name:'오한나',role:'Editor',team:'M&E'},
-  {name:'홍찬주',role:'Ad Manager',team:'M&E'},
-  {name:'이혜린',role:'Designer',team:'M&E'},
-  {name:'안영주',role:'UX Designer',team:'Product'},
-  {name:'김다은',role:'Engineer',team:'Product'},
-  {name:'문혁은',role:'Engineer',team:'Product'},
-  {name:'유진수',role:'Engineer',team:'Product'},
-  {name:'임소정',role:'Engineer',team:'Product'},
-  {name:'정수형',role:'Engineer',team:'Product'},
-  {name:'최제혁',role:'Engineer',team:'Product'},
-  {name:'윤진한',role:'PO',team:'Product'},
-  {name:'윤혜준',role:'Staff-QA',team:'Product'},
+  {name:'정겨운',role:'CSO',team:'Etc'},
 ];
+
+// 육아휴직자는 팀원 명단에 status:'leave'로 들어 있어요 (복직하면 팀원 수정에서 '재직'으로 바꾸면 돼요)
+// 퇴사자 (명단에서는 빠졌지만 이전 원온원 기록을 계속 볼 수 있어요) — 이름·직무·마지막 소속 팀
+const FORMER_MEMBERS = [
+  {name:'임희선',role:'Designer',team:'브랜드팀'},
+  {name:'이옥석',role:'CX',team:'브랜드팀'},
+  {name:'김유리',role:'AMD',team:'커머스팀'},
+  {name:'김태윤',role:'MD',team:'커머스팀'},
+  {name:'윤진한',role:'PO',team:'프로덕트팀'},
+];
+function isFormerName(n){return FORMER_MEMBERS.some(m=>m.name===String(n||'').trim());}
+function isLeaveName(n){const m=getMembers().find(x=>x.name===String(n||'').trim());return !!m&&m.status==='leave';}
+// 퇴사자·육아휴직자는 '진행 중' 액션 아이템에서 제외 (기록과 완료된 액션은 그대로 볼 수 있어요)
+function isInactiveName(n){return isFormerName(n)||isLeaveName(n);}
 
 const TEAM_ORDER = ['Biz팀','프로덕트팀','커머스팀','마에팅팀(GA팀)','브랜드팀','Etc'];
 const AVATAR_COLORS = ['#2D7CD2','#7f77dd','#e87a5d','#4caf8a','#e6a817','#9c6dd8'];
@@ -403,8 +432,10 @@ function getMembers() {
   const stored = localStorage.getItem(MEMBERS_KEY);
   let list = null;
   if (stored) { try { list = JSON.parse(stored); } catch(e) { list = null; } }
-  const fresh = !list;
-  if (fresh) list = DEFAULT_MEMBERS;
+  // 저장된 목록이 없거나 명단 버전이 바뀌었으면 최신 명단으로 설정 (명단에 없는 사람의 기록은 사이드바 '명단 외 기록'에 그대로 남아요)
+  const staleVer = localStorage.getItem(MEMBERS_VER_KEY) !== MEMBERS_VER;
+  const fresh = !list || staleVer;
+  if (fresh) { list = DEFAULT_MEMBERS.map(m => ({...m})); localStorage.setItem(MEMBERS_VER_KEY, MEMBERS_VER); }
   // 예전 팀 이름으로 저장된 팀원도 새 팀 이름으로 맞춤
   let changed = false;
   list = list.map(m => { const t = normTeam(m.team); if (t !== m.team) { changed = true; return {...m, team: t}; } return m; });
@@ -568,7 +599,8 @@ function renderSidebar(){
   list.innerHTML='';
 
   TEAM_ORDER.forEach(team=>{
-    const filtered=members.filter((m,i)=>m.team===team&&(!q||m.name.includes(q)||m.role.includes(q)));
+    const filtered=members.filter((m,i)=>m.team===team&&(!q||m.name.includes(q)||m.role.includes(q)||(m.nick||'').toLowerCase().includes(q.toLowerCase())))
+      .sort((a,b)=>(a.status==='leave')-(b.status==='leave'));
     if(!filtered.length)return;
     const sec=document.createElement('div');
     sec.className='team-section';
@@ -578,10 +610,10 @@ function renderSidebar(){
       const globalIdx=members.findIndex(x=>x.name===m.name&&x.team===m.team);
       const cnt=getMemberRecords(m.name).length;
       const div=document.createElement('div');
-      div.className='member-item'+(selectedMember===m.name?' active':'');
+      div.className='member-item'+(selectedMember===m.name?' active':'')+(m.status==='leave'?' on-leave':'');
       div.innerHTML=`
         <div class="member-avatar" style="background:${avatarColor(m.name)}">${m.name[0]}</div>
-        <div class="member-info"><div class="member-name">${m.name}</div><div class="member-role">${m.role}</div></div>
+        <div class="member-info"><div class="member-name">${m.name}</div><div class="member-role">${m.role}${m.nick?' · '+m.nick:''}${m.status==='leave'?' · 🍼 육아휴직':''}</div></div>
         ${cnt?`<span class="member-count">${cnt}</span>`:''}
         <div class="member-edit-btns">
           <button class="btn-edit-m" onclick="editMember(event,${globalIdx})" title="수정">✏️</button>
@@ -592,6 +624,47 @@ function renderSidebar(){
     });
     list.appendChild(sec);
   });
+
+  // 퇴사자: 이전 기록이 있는 사람만 따로 모아서 보여줌
+  const formerCnt={};
+  allRecords.forEach(r=>{const n=String(r.name||'').trim();if(isFormerName(n))formerCnt[n]=(formerCnt[n]||0)+1;});
+  const formerList=FORMER_MEMBERS.filter(m=>formerCnt[m.name]&&(!q||m.name.includes(q)||m.role.includes(q)));
+  if(formerList.length){
+    const sec=document.createElement('div');
+    sec.className='team-section';
+    sec.innerHTML=`<div class="team-label" title="퇴사자의 이전 원온원 기록이에요">퇴사자 (이전 기록)</div>`;
+    formerList.forEach(m=>{
+      const div=document.createElement('div');
+      div.className='member-item'+(selectedMember===m.name?' active':'');
+      div.innerHTML=`<div class="member-avatar" style="background:#aaa">${esc(m.name[0])}</div>
+        <div class="member-info"><div class="member-name">${esc(m.name)}</div><div class="member-role">${esc(m.team)} · ${esc(m.role)} · 퇴사</div></div>
+        <span class="member-count">${formerCnt[m.name]}</span>`;
+      div.onclick=()=>selectMember(m.name);
+      sec.appendChild(div);
+    });
+    list.appendChild(sec);
+  }
+
+  // 명단에 없는 이름의 기록 (이름이 바뀌었거나 아직 명단에 없는 사람) — 기록이 사라지지 않도록 따로 보여줌
+  const known=new Set([...members.map(m=>m.name),...FORMER_MEMBERS.map(m=>m.name)]);
+  const extras={};
+  allRecords.forEach(r=>{const n=String(r.name||'').trim();if(n&&!known.has(n))extras[n]=(extras[n]||0)+1;});
+  const extraNames=Object.keys(extras).filter(n=>!q||n.includes(q)).sort();
+  if(extraNames.length){
+    const sec=document.createElement('div');
+    sec.className='team-section';
+    sec.innerHTML=`<div class="team-label" title="팀 명단에 없는 이름의 기록이에요">명단 외 기록</div>`;
+    extraNames.forEach(n=>{
+      const div=document.createElement('div');
+      div.className='member-item'+(selectedMember===n?' active':'');
+      div.innerHTML=`<div class="member-avatar" style="background:#aaa">${esc(n[0])}</div>
+        <div class="member-info"><div class="member-name">${esc(n)}</div><div class="member-role">명단에 없음</div></div>
+        <span class="member-count">${extras[n]}</span>`;
+      div.onclick=()=>selectMember(n);
+      sec.appendChild(div);
+    });
+    list.appendChild(sec);
+  }
 }
 
 /* ── 팀원 모달 ── */
@@ -603,10 +676,12 @@ function openMemberModal(idx){
     document.getElementById('m-name').value=m.name;
     document.getElementById('m-role').value=m.role;
     document.getElementById('m-team').value=m.team;
+    document.getElementById('m-status').value=m.status||'';
   } else {
     document.getElementById('m-name').value='';
     document.getElementById('m-role').value='';
     document.getElementById('m-team').value='Biz팀';
+    document.getElementById('m-status').value='';
   }
   document.getElementById('modal-member').classList.add('open');
 }
@@ -637,6 +712,7 @@ function saveMember(){
   const name=document.getElementById('m-name').value.trim();
   const role=document.getElementById('m-role').value.trim();
   const team=document.getElementById('m-team').value;
+  const status=document.getElementById('m-status').value;
   if(!name){showToast('⚠️ 이름을 입력해 주세요');return;}
   if(!role){showToast('⚠️ 역할/직무를 입력해 주세요');return;}
 
@@ -647,7 +723,7 @@ function saveMember(){
     // 수정
     const idx=parseInt(idxStr);
     const oldName=members[idx].name;
-    members[idx]={name,role,team};
+    members[idx]={...members[idx],name,role,team,status};
     // 기록의 이름도 업데이트
     if(oldName!==name){
       allRecords=allRecords.map(r=>r.name===oldName?{...r,name,team,role}:r);
@@ -659,7 +735,7 @@ function saveMember(){
     if(members.find(m=>m.name===name&&m.team===team)){
       showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;
     }
-    members.push({name,role,team});
+    members.push({name,role,team,status});
     showToast(`✅ ${name} 님이 추가되었습니다`);
   }
 
@@ -684,10 +760,11 @@ function renderMemberView(){
     area.innerHTML=`<div class="empty-state"><div class="icon">👈</div><p>왼쪽에서 팀원을 선택해 주세요</p></div>`;
     return;
   }
-  const member=getMembers().find(m=>m.name===selectedMember);
+  const former=FORMER_MEMBERS.find(m=>m.name===selectedMember);
+  const member=getMembers().find(m=>m.name===selectedMember)||former;
   const records=getMemberRecords(selectedMember).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
   titleEl.textContent=`${selectedMember} 님의 원온원 기록`;
-  subEl.textContent=`${member?.role||''} · ${member?.team||''}`;
+  subEl.textContent=member?`${member.role||''} · ${member.team||''}${member===former?' · 퇴사':''}${member&&member.status==='leave'?' · 🍼 육아휴직':''}`:'팀 명단에 없는 이름이에요 (이전 팀원이거나 이름이 바뀐 기록일 수 있어요)';
   addBtn.style.display='inline-block';statRow.style.display='grid';
 
   const face=records.filter(r=>r.method==='대면').length;
@@ -727,7 +804,7 @@ function openTeam(t){viewMode='team';selectedTeam=t;selectedMember=null;renderSi
 function selectMember(n){viewMode='member';selectedMember=n;selectedTeam=null;renderSidebar();renderMain();window.scrollTo(0,0);}
 function goSearch(tag,team){SRCH.q='';SRCH.tags=tag?[tag]:[];SRCH.team=team||'';SRCH.method='';SRCH.period='';SRCH.openOnly=false;setView('search');}
 
-function memberTeam(n){const m=getMembers().find(x=>x.name===n);return m?m.team:'';}
+function memberTeam(n){const m=getMembers().find(x=>x.name===n)||FORMER_MEMBERS.find(x=>x.name===n);return m?m.team:'';}
 function recTeam(r){return memberTeam(r.name)||normTeam(r.team);}
 function daysSince(dt){const d=new Date(dt);return isNaN(d)?null:Math.floor((Date.now()-d.getTime())/86400000);}
 function fmtMD(s){const d=new Date(String(s).length<=10?s+'T00:00':s);return isNaN(d)?'':(d.getMonth()+1)+'/'+d.getDate();}
@@ -832,7 +909,7 @@ function cardHTML(r,opt){
 /* ── 메인 화면 분배 ── */
 function updateNav(){
   document.querySelectorAll('#side-nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===viewMode));
-  let n=0;allRecords.forEach(r=>{n+=getActions(r).filter(a=>!a.done).length;});
+  let n=0;allRecords.forEach(r=>{if(!isInactiveName(r.name))n+=getActions(r).filter(a=>!a.done).length;});
   const c=document.getElementById('act-cnt');
   if(c){c.textContent=n||'';c.style.display=n?'':'none';}
 }
@@ -853,15 +930,23 @@ function renderMain(){
 
 /* ── 팀 보기 ── */
 function teamStats(team){
-  const ms=getMembers().filter(m=>m.team===team);
-  const rows=ms.map(m=>{
+  const allM=getMembers().filter(m=>m.team===team);
+  const allRows=allM.map(m=>{
     const rs=getMemberRecords(m.name).slice().sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
     const open=rs.reduce((n,r)=>n+getActions(r).filter(a=>!a.done).length,0);
     return {m,rs,last:rs[0],days:rs[0]?daysSince(rs[0].datetime):null,open};
   });
-  return {team,ms,rows,
-    total:rows.reduce((n,x)=>n+x.rs.length,0),
-    open:rows.reduce((n,x)=>n+x.open,0),
+  const rows=allRows.filter(x=>x.m.status!=='leave');      // 재직
+  const lRows=allRows.filter(x=>x.m.status==='leave');     // 육아휴직
+  const ms=rows.map(x=>x.m);
+  // 퇴사자: 기록이 있는 사람만 (이전 기록 열람용)
+  const fRows=FORMER_MEMBERS.filter(m=>m.team===team).map(m=>{
+    const rs=getMemberRecords(m.name).slice().sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+    return {m,rs,last:rs[0]};
+  }).filter(x=>x.rs.length);
+  return {team,ms,rows,lRows,fRows,
+    total:rows.concat(lRows).reduce((n,x)=>n+x.rs.length,0)+fRows.reduce((n,x)=>n+x.rs.length,0),
+    open:rows.reduce((n,x)=>n+x.open,0),   // 휴직자의 액션은 진행 중에서 제외
     need:rows.filter(x=>x.days===null||x.days>=30).length};
 }
 function gapPill(x){
@@ -876,16 +961,17 @@ function statCards(items){
 
 function renderTeams(){
   setHeader('전체 팀 현황','팀 카드를 누르면 팀 단위로 기록을 확인할 수 있어요',false);
-  const all=TEAM_ORDER.map(teamStats).filter(s=>s.ms.length);
+  const all=TEAM_ORDER.map(teamStats).filter(s=>s.ms.length||s.lRows.length);
   statCards([
-    [all.reduce((n,s)=>n+s.ms.length,0),'전체 팀원'],
+    [all.reduce((n,s)=>n+s.ms.length,0),'재직 팀원'],
+    ...(all.some(s=>s.lRows.length)?[[all.reduce((n,s)=>n+s.lRows.length,0),'육아휴직']]:[]),
     [all.reduce((n,s)=>n+s.total,0),'누적 원온원 기록'],
     [all.reduce((n,s)=>n+s.open,0),'미완료 액션 아이템','#e6a817'],
     [all.reduce((n,s)=>n+s.need,0),'30일 이상 원온원 없음(기록 없음 포함)','#c62828']
   ]);
   document.getElementById('records-area').innerHTML=`<div class="team-grid">${all.map(s=>`
     <div class="team-card" onclick="openTeam('${s.team}')">
-      <div class="tc-head"><div><div class="tc-name">${esc(s.team)}</div><div class="tc-sub">${s.ms.length}명 · 누적 ${s.total}회</div></div>
+      <div class="tc-head"><div><div class="tc-name">${esc(s.team)}</div><div class="tc-sub">${s.ms.length}명${s.lRows.length?' · 육아휴직 '+s.lRows.length+'명':''} · 누적 ${s.total}회</div></div>
         <span class="pill ${s.need?'bad':'ok'}">${s.need?'원온원 필요 '+s.need+'명':'간격 양호'}</span></div>
       <div class="tc-mini"><div><b>${s.total}</b><span>누적 기록</span></div><div><b style="color:#e6a817">${s.open}</b><span>미완료 액션</span></div></div>
       <div class="tc-avs">${s.ms.slice(0,10).map(m=>`<div class="member-avatar" style="background:${avatarColor(m.name)}" title="${escAttr(m.name)}">${esc(m.name[0])}</div>`).join('')}${s.ms.length>10?`<span style="font-size:11px;color:#999;margin-left:10px;align-self:center;">+${s.ms.length-10}</span>`:''}</div>
@@ -894,12 +980,12 @@ function renderTeams(){
 
 function renderTeam(team){
   const s=teamStats(team);
-  setHeader(team,`${s.ms.length}명 · 누적 원온원 ${s.total}회`,false);
-  statCards([[s.ms.length,'팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,'30일 이상 원온원 없음(기록 없음 포함)','#c62828']]);
+  setHeader(team,`${s.ms.length}명${s.lRows.length?' · 육아휴직 '+s.lRows.length+'명':''} · 누적 원온원 ${s.total}회`,false);
+  statCards([[s.ms.length,'재직 팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,'30일 이상 원온원 없음(기록 없음 포함)','#c62828']]);
   const tagCnt={};
-  s.rows.forEach(x=>x.rs.forEach(r=>(r.tags||[]).forEach(t=>tagCnt[t]=(tagCnt[t]||0)+1)));
+  [...s.rows,...s.lRows,...s.fRows].forEach(x=>x.rs.forEach(r=>(r.tags||[]).forEach(t=>tagCnt[t]=(tagCnt[t]||0)+1)));
   const tags=Object.entries(tagCnt).sort((a,b)=>b[1]-a[1]);
-  const recs=s.rows.flatMap(x=>x.rs).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+  const recs=[...s.rows,...s.lRows,...s.fRows].flatMap(x=>x.rs).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
   document.getElementById('records-area').innerHTML=`
     <div class="sec-title" style="margin-top:4px">👤 팀원 <small>이름을 누르면 개인 기록으로 이동해요</small></div>
     <div class="list-card">${s.rows.map(x=>`
@@ -909,6 +995,22 @@ function renderTeam(team){
           <div class="lr-sub">${x.last?'마지막 '+ymd(x.last.datetime)+' · 총 '+x.rs.length+'회':'아직 기록이 없어요'}</div></div>
         ${x.open?`<span class="pill warn">액션 ${x.open}</span>`:''}${gapPill(x)}
       </div>`).join('')||'<div class="empty-state"><p>이 팀에 등록된 팀원이 없어요</p></div>'}</div>
+    ${s.lRows.length?`<div class="sec-title">🍼 육아휴직 <small>원온원 필요·진행 중 액션 계산에서는 제외돼요</small></div>
+    <div class="list-card">${s.lRows.map(x=>`
+      <div class="list-row click" onclick='selectMember(${JSON.stringify(x.m.name)})'>
+        <div class="member-avatar" style="background:${avatarColor(x.m.name)};opacity:.75">${esc(x.m.name[0])}</div>
+        <div class="lr-main"><div class="lr-name">${esc(x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(x.m.role)}</span></div>
+          <div class="lr-sub">${x.last?'마지막 '+ymd(x.last.datetime)+' · 총 '+x.rs.length+'회':'아직 기록이 없어요'}</div></div>
+        <span class="pill leave">육아휴직</span>
+      </div>`).join('')}</div>`:''}
+    ${s.fRows.length?`<div class="sec-title">🕊️ 퇴사자 기록 <small>이전 원온원 기록을 계속 볼 수 있어요</small></div>
+    <div class="list-card">${s.fRows.map(x=>`
+      <div class="list-row click" onclick='selectMember(${JSON.stringify(x.m.name)})'>
+        <div class="member-avatar" style="background:#aaa">${esc(x.m.name[0])}</div>
+        <div class="lr-main"><div class="lr-name">${esc(x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(x.m.role)}</span></div>
+          <div class="lr-sub">마지막 ${ymd(x.last.datetime)} · 총 ${x.rs.length}회</div></div>
+        <span class="pill gray">퇴사</span>
+      </div>`).join('')}</div>`:''}
     <div class="sec-title">🏷️ 팀에서 자주 나온 주제 <small>누르면 이 팀의 기록 중에서 검색해요</small></div>
     <div class="list-card" style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px;">${tags.map(([t,c])=>`<span class="tag-chip link" onclick='goSearch(${JSON.stringify(t)},${JSON.stringify(team)})'>#${esc(t)} ${c}</span>`).join('')||'<span style="color:#bbb;font-size:13px;">아직 태그가 없어요. 기록을 작성할 때 태그를 달아보세요.</span>'}</div>
     <div class="sec-title">🕘 팀 타임라인 <small>팀원 전체 기록을 최신순으로</small></div>
@@ -942,7 +1044,7 @@ function doSearch(){
     if(SRCH.method&&r.method!==SRCH.method)return false;
     if(SRCH.period){const d=daysSince(r.datetime);if(d===null||d>+SRCH.period)return false;}
     if(SRCH.tags.length&&!SRCH.tags.every(t=>(r.tags||[]).includes(t)))return false;
-    if(SRCH.openOnly&&!getActions(r).some(a=>!a.done))return false;
+    if(SRCH.openOnly&&(isInactiveName(r.name)||!getActions(r).some(a=>!a.done)))return false;
     if(!toks.length)return true;
     const hay=[r.name,recTeam(r),r.role,r.check,r.note,r.action,...getActions(r).map(a=>a.t+' '+(a.owner||'')),...(r.tags||[]).map(t=>'#'+t+' '+t)].join(' ').toLowerCase();
     return toks.every(t=>hay.includes(t));
@@ -958,12 +1060,12 @@ function renderActionsView(){
   setHeader('액션 아이템','원온원에서 정한 할 일을 모아서 챙겨요 · 체크하면 완료로 저장돼요',false);
   const items=[];
   allRecords.forEach(r=>getActions(r).forEach((a,i)=>items.push({r,a,i})));
-  let list=items.filter(x=>ACTV.status==='all'||(ACTV.status==='open'?!x.a.done:x.a.done));
+  let list=items.filter(x=>ACTV.status==='all'||(ACTV.status==='open'?(!x.a.done&&!isInactiveName(x.r.name)):x.a.done));
   if(ACTV.team)list=list.filter(x=>recTeam(x.r)===ACTV.team);
   const dueKey=x=>x.a.due?new Date(x.a.due+'T00:00').getTime():Infinity;
   list.sort((a,b)=>dueKey(a)-dueKey(b)||new Date(b.r.datetime)-new Date(a.r.datetime));
   const teams=TEAM_ORDER.filter(t=>getMembers().some(m=>m.team===t));
-  const openN=items.filter(x=>!x.a.done).length;
+  const openN=items.filter(x=>!x.a.done&&!isInactiveName(x.r.name)).length;
   document.getElementById('records-area').innerHTML=`
     <div class="filter-row">
       <div class="seg">${[['open','진행 중 '+openN],['done','완료'],['all','전체']].map(([k,l])=>`<button type="button" class="${ACTV.status===k?'on':''}" onclick="setActStatus('${k}')">${l}</button>`).join('')}</div>
@@ -1012,7 +1114,7 @@ async function saveRecord(){
   const saveBtn=document.getElementById('save-record-btn');
   saveBtn.textContent='저장 중...';saveBtn.disabled=true;
 
-  const member=getMembers().find(m=>m.name===selectedMember);
+  const member=getMembers().find(m=>m.name===selectedMember)||FORMER_MEMBERS.find(m=>m.name===selectedMember);
   const editId=document.getElementById('edit-id').value;
   const wantSummary=document.getElementById('f-summary').checked;
   // 수정할 때 기존 기록의 다른 항목(요약 발송 이력 등)을 잃지 않도록 이어받음
