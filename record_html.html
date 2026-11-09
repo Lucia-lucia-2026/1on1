@@ -181,6 +181,12 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
 .ci-diff .add{color:#2e7d32;} .ci-diff .del{color:#c62828;text-decoration:line-through;}
 .ci-row-detail{margin-bottom:12px;} .ci-row-detail .lb{display:block;font-size:11.5px;font-weight:700;color:#999;margin-bottom:3px;}
 
+/* 요약·공개 범위 표시 */
+.vis{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:100px;margin-left:6px;vertical-align:1px;white-space:nowrap;}
+.vis.in{background:#e3f2fd;color:#1565c0;}
+.vis.out{background:#f3eefc;color:#5b3fa0;}
+.vis-legend{font-size:12px;color:#777;line-height:1.8;background:#f8fafc;border:1px solid #e8edf3;border-radius:10px;padding:8px 12px;margin:-0.75rem 0 1.25rem;}
+
 /* 모달 공통 */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;}
 .modal-bg.open{display:flex;}
@@ -277,42 +283,43 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
 <div class="modal-bg" id="modal-record">
   <div class="modal">
     <h2 id="record-modal-title">원온원 기록 추가</h2>
+    <div class="vis-legend"><span class="vis in" style="margin:0 4px 0 0;">💬 요약 포함</span> Slack 요약에 들어가는 항목 · <span class="vis out" style="margin:0 4px 0 6px;">🔒 관리자만</span> 요약·팀원에게 나가지 않는 항목</div>
     <input type="hidden" id="edit-id">
     <div id="f-checkin-box"></div>
-    <div class="field"><label>원온원 일시 *</label><input type="datetime-local" id="f-datetime" onchange="updateCheckinBox()"></div>
+    <div class="field"><label>원온원 일시 * <span class="vis in">💬 요약 포함</span></label><input type="datetime-local" id="f-datetime" onchange="updateCheckinBox()"></div>
     <div class="field">
-      <label>원온원 방식</label>
+      <label>원온원 방식 <span class="vis in">💬 요약 포함</span></label>
       <select id="f-method">
         <option value="대면">🏢 대면</option>
         <option value="비대면(게더)">💻 비대면(게더)</option>
       </select>
     </div>
     <div class="field">
-      <label>템플릿 <span style="font-weight:400;color:#aaa;">(고르면 체크사항 작성 틀이 채워져요)</span></label>
+      <label>템플릿 <span class="vis out">🔒 관리자만</span> <span style="font-weight:400;color:#aaa;">(고르면 체크사항 작성 틀이 채워져요)</span></label>
       <div class="tag-pick" id="f-tpl"></div>
     </div>
     <div class="field">
-      <label>컨디션 <span style="font-weight:400;color:#aaa;">(관리자가 관찰한 팀원 상태 · 팀원에게는 보이지 않아요)</span></label>
+      <label>컨디션 <span class="vis out">🔒 관리자만</span> <span style="font-weight:400;color:#aaa;">(관리자가 관찰한 팀원 상태)</span></label>
       <div class="tag-pick" id="f-mood"></div>
     </div>
-    <div class="field"><label>주요 체크사항</label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
+    <div class="field"><label>주요 체크사항 <span class="vis out">🔒 관리자만</span></label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
     <div class="field">
-      <label>액션 아이템 <span style="font-weight:400;color:#aaa;">(담당·기한은 선택, 완료는 체크)</span></label>
+      <label>액션 아이템 <span class="vis in">💬 요약 포함</span> <span style="font-weight:400;color:#aaa;">(요약에는 내용만, 담당·기한은 제외)</span></label>
       <div id="f-actions"></div>
       <button type="button" class="btn btn-outline btn-sm" onclick="addActionRow()">＋ 액션 추가</button>
     </div>
     <div class="field">
-      <label>태그 <span style="font-weight:400;color:#aaa;">(검색·모아보기에 쓰여요)</span></label>
+      <label>태그 <span class="vis out">🔒 관리자만</span> <span style="font-weight:400;color:#aaa;">(검색·모아보기에 쓰여요)</span></label>
       <div class="tag-pick" id="f-tags"></div>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <input type="text" id="f-tag-new" placeholder="직접 추가 (예: 승진)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}">
         <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="addCustomTag()">추가</button>
       </div>
     </div>
-    <div class="field"><label>비고</label><textarea id="f-note" placeholder="기타 메모나 특이사항을 자유롭게 적어주세요" style="min-height:70px;"></textarea></div>
+    <div class="field"><label>비고 <span class="vis out">🔒 관리자만</span></label><textarea id="f-note" placeholder="기타 메모나 특이사항을 자유롭게 적어주세요" style="min-height:70px;"></textarea></div>
     <div class="field" style="background:#eef5fd;border-radius:12px;padding:12px 14px;">
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:0;cursor:pointer;"><input type="checkbox" id="f-summary" style="width:auto;padding:0;accent-color:#2D7CD2;"> 💬 저장 후 팀원에게 Slack 요약 보내기 <span style="font-weight:400;color:#888;">(미리보기 후 발송)</span></label>
-      <div style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.6;">발송 전에 내용을 확인하고 수정할 수 있어요. 주요 체크사항·비고는 자동으로 포함되지 않아요.</div>
+      <div style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.6;">요약에는 <b>일시·방식·액션 아이템 내용</b>만 들어가요. 발송 전에 내용을 확인하고 수정할 수 있어요.</div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeRecordModal()">취소</button>
@@ -566,6 +573,7 @@ function enterApp(){
   loadAllFromSheet();
   loadSlackDirectory();
   loadCheckins();
+  loadUiState();
 }
 
 // 비밀번호는 서버가 확인합니다 (맞으면 이번 접속 동안만 기억)
@@ -701,10 +709,31 @@ async function loadCheckins(){
   if(res&&Array.isArray(res.checkins)){checkins=res.checkins;reminders=Array.isArray(res.reminders)?res.reminders:[];if(viewMode==='dash'||viewMode==='member')renderMain();}
 }
 function ciOf(sid){return checkins.find(c=>String(c.sid)===String(sid));}
-function ciSeenMap(){try{return JSON.parse(localStorage.getItem('1on1_ci_seen')||'{}');}catch(e){return {};}}
+let ciSeenSrv={}, seenQueue={}, seenTimer=null;   // 서버에 저장된 '확인한 체크인' 표시 (모든 관리자가 공유)
+async function loadUiState(){
+  const res=await api({action:'getUiState'});
+  if(res&&res.ciSeen&&typeof res.ciSeen==='object'){ciSeenSrv=res.ciSeen;if(viewMode==='dash'||viewMode==='member')renderMain();}
+}
+function ciSeenMap(){
+  let loc={};try{loc=JSON.parse(localStorage.getItem('1on1_ci_seen')||'{}');}catch(e){}
+  const m={...loc};
+  Object.keys(ciSeenSrv).forEach(k=>{if(!(k in m)||String(ciSeenSrv[k])>String(m[k]))m[k]=ciSeenSrv[k];});
+  return m;
+}
 function ciStamp(c){return c.editedAt||c.submittedAt||'';}
 function ciIsNew(c){return (ciSeenMap()[String(c.sid)]||'')<ciStamp(c);}   // 마지막으로 열어 본 뒤 새로 제출·수정된 체크인
-function ciMarkSeen(c){const m=ciSeenMap();m[String(c.sid)]=ciStamp(c);try{localStorage.setItem('1on1_ci_seen',JSON.stringify(m));}catch(e){}}
+function ciMarkSeen(c){
+  const sid=String(c.sid),st=ciStamp(c);
+  try{const m=JSON.parse(localStorage.getItem('1on1_ci_seen')||'{}');m[sid]=st;localStorage.setItem('1on1_ci_seen',JSON.stringify(m));}catch(e){}   // 서버가 아직 지원하지 않을 때를 위한 보조 저장
+  if(String(ciSeenSrv[sid]||'')>=st)return;
+  ciSeenSrv[sid]=st;seenQueue[sid]=st;
+  clearTimeout(seenTimer);seenTimer=setTimeout(flushSeen,700);
+}
+async function flushSeen(){
+  const e=seenQueue;seenQueue={};
+  if(!Object.keys(e).length)return;
+  await api({action:'markCheckinsSeen',data:JSON.stringify({entries:e})});
+}
 function ciStampText(iso){
   const m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso||''));
   if(!m)return '';
@@ -780,7 +809,7 @@ function updateCheckinBox(){
   curCheckinSid=c?String(c.sid):'';
   if(!c){box.innerHTML='';return;}
   ciMarkSeen(c);
-  box.innerHTML=`<div class="ci-box"><div class="t">📝 팀원 셀프 체크인 <span class="ci-chip" style="cursor:default;margin:0;">${esc(ciStampText(c.submittedAt))} 제출</span>${c.editCount>0?`<span class="ci-chip edited" style="cursor:default;margin:0;">✏️ 수정 ${c.editCount}회 · ${esc(ciStampText(c.editedAt))}</span>`:''}</div>
+  box.innerHTML=` <div class="ci-box"><div class="t">📝 팀원 셀프 체크인 <span class="vis out" style="margin:0;">🔒 관리자만 · 요약 미포함</span> <span class="ci-chip" style="cursor:default;margin:0;">${esc(ciStampText(c.submittedAt))} 제출</span>${c.editCount>0?`<span class="ci-chip edited" style="cursor:default;margin:0;">✏️ 수정 ${c.editCount}회 · ${esc(ciStampText(c.editedAt))}</span>`:''}</div>
     ${ciDetailHTML(c)}
     <div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="btn btn-outline btn-sm" onclick="importCheckinAgenda()">안건을 체크사항에 가져오기</button></div>
     <div style="font-size:11.5px;color:#888;margin-top:8px;line-height:1.6;">팀원이 고른 컨디션은 참고용이에요. 아래 컨디션은 관리자가 직접 관찰한 값으로 따로 선택해 주세요.</div></div>`;
@@ -883,6 +912,27 @@ function renderSidebar(){
   }
 }
 
+/* ── 이름 변경: 기존 기록·연락처를 새 이름으로 이어붙이기 ── */
+async function renameRecords(oldName, newName, team, role){
+  const targets = allRecords.filter(r => String(r.name||'').trim() === oldName);
+  let ok = 0, fail = 0;
+  for(let i = 0; i < targets.length; i++){
+    showToast(`기록 이름 변경 중... ${i+1}/${targets.length}`);
+    const upd = {...targets[i], name: newName, team: team, role: role};
+    const res = await api({action:'save', record: JSON.stringify(upd)});
+    if(res && res.success){ ok++; allRecords = allRecords.map(x => String(x.id) === String(upd.id) ? upd : x); } else fail++;
+  }
+  return {ok, fail, total: targets.length};
+}
+// 설문 서버의 연락처(이메일·Slack ID)도 새 이름으로 복사해 둠 (Slack 요약 때 Slack ID가 자동으로 채워지도록)
+async function migrateContact(oldName, newName, team){
+  const prev = slackContacts[oldName];
+  if(!prev) return;
+  const rec = {...prev, id: 'ct_' + newName, name: newName, team: normTeam(team) === 'Etc' ? '' : normTeam(team), updatedAt: new Date().toLocaleString('ko-KR')};
+  const res = await surveyApi({action:'saveSurvey', survey: JSON.stringify(rec)});
+  if(res && res.success){ slackContacts[newName] = rec; if(rec.slackUserId) slackDir[newName] = rec.slackUserId; }
+}
+
 /* ── 팀원 모달 (저장은 서버에) ── */
 let savingMember = false;
 function openMemberModal(name){
@@ -935,7 +985,7 @@ async function saveMember(){
     if(name !== oldName){
       if(all.some(m => m.name === name)){showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;}
       const cnt = getMemberRecords(oldName).length;
-      if(cnt && !confirm(`이름을 바꾸면 기존 기록 ${cnt}건은 이전 이름(${oldName}) 그대로 남아 “명단 외 기록”에 표시돼요. 계속할까요?`)) return;
+      if(cnt && !confirm(`이름을 바꾸면 기존 원온원 기록 ${cnt}건도 새 이름(${name})으로 함께 바꿔요.\n(설문·체크인 서버에 있는 이전 체크인은 이전 이름으로 남아요.) 계속할까요?`)) return;
     }
     all[i] = {...all[i], name, role, team};
     if(status) all[i].status = status; else delete all[i].status;
@@ -951,8 +1001,16 @@ async function saveMember(){
   const ok = await persistMembers(all);
   savingMember = false;
   if(!ok) return;
+  let renameNote='';
+  if(oldName && name!==oldName){
+    savingMember = true;
+    const rr = await renameRecords(oldName, name, team, role);
+    await migrateContact(oldName, name, team);
+    savingMember = false;
+    if(rr.total) renameNote = ` · 기록 ${rr.ok}건 이름 변경${rr.fail?' (실패 '+rr.fail+'건은 “명단 외 기록”에 남아요)':''}`;
+  }
   if(oldName && selectedMember===oldName) selectedMember=name;
-  showToast(msg);
+  showToast(msg + renameNote);
   closeMemberModal();
   renderSidebar();
   renderMain();
