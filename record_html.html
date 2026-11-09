@@ -89,6 +89,11 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
 .empty-state .icon{font-size:48px;margin-bottom:12px;}
 .empty-state p{font-size:14px;line-height:1.8;}
 
+.sent-chip{font-size:11px;padding:3px 10px;border-radius:100px;background:#e8f1fb;color:#1f5fa8;font-weight:600;white-space:nowrap;}
+.summary-btn{background:none;border:1px solid #c5dcf4;color:#2D7CD2;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;}
+.summary-btn:hover{background:#e8f4ff;}
+.hint-blue{font-size:11px;color:#2D7CD2;margin-top:5px;}
+
 /* 모달 공통 */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;}
 .modal-bg.open{display:flex;}
@@ -118,7 +123,7 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
     <div class="icon">📋</div>
     <h2>원온원 기록 관리</h2>
     <p>관리자 비밀번호를 입력해 주세요</p>
-    <input type="password" id="pw-input" placeholder="••••" maxlength="20" onkeydown="if(event.key==='Enter')checkPw()">
+    <input type="password" id="pw-input" placeholder="••••" maxlength="100" onkeydown="if(event.key==='Enter')checkPw()">
     <div class="pw-error" id="pw-error"></div>
     <button class="pw-btn" onclick="checkPw()">확인</button>
   </div>
@@ -185,9 +190,36 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
     <div class="field"><label>주요 체크사항</label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
     <div class="field"><label>액션 아이템</label><textarea id="f-action" placeholder="예: 다음 주까지 OO 리포트 작성, 팀 미팅 일정 조율 등"></textarea></div>
     <div class="field"><label>비고</label><textarea id="f-note" placeholder="기타 메모나 특이사항을 자유롭게 적어주세요" style="min-height:70px;"></textarea></div>
+    <div class="field" style="background:#eef5fd;border-radius:12px;padding:12px 14px;">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:0;cursor:pointer;"><input type="checkbox" id="f-summary" style="width:auto;padding:0;accent-color:#2D7CD2;"> 💬 저장 후 팀원에게 Slack 요약 보내기 <span style="font-weight:400;color:#888;">(미리보기 후 발송)</span></label>
+      <div style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.6;">발송 전에 내용을 확인하고 수정할 수 있어요. 주요 체크사항·비고는 자동으로 포함되지 않아요.</div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeRecordModal()">취소</button>
       <button class="btn btn-primary" id="save-record-btn" onclick="saveRecord()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Slack 요약 미리보기 모달 -->
+<div class="modal-bg" id="modal-summary">
+  <div class="modal" style="max-width:520px;">
+    <h2>💬 Slack 요약 미리보기</h2>
+    <p id="sum-sub" style="font-size:13px;color:#888;line-height:1.6;margin:-0.75rem 0 1.25rem;"></p>
+    <div class="field"><label>받는 사람</label><input type="text" id="sum-name" readonly style="background:#f5f5f5;color:#888;"></div>
+    <div class="field">
+      <label>Slack User ID *</label>
+      <input type="text" id="sum-slack" placeholder="U0XXXXXXXXX" autocomplete="off">
+      <div class="hint-blue" id="sum-slack-hint"></div>
+    </div>
+    <div class="field">
+      <label>보낼 메시지 <span style="font-weight:400;color:#aaa;">(직접 수정할 수 있어요)</span></label>
+      <textarea id="sum-text" style="min-height:210px;font-size:13px;line-height:1.7;"></textarea>
+      <div style="font-size:11.5px;color:#888;margin-top:6px;line-height:1.6;">보내는 내용은 위에 보이는 그대로예요. 주요 체크사항·비고는 자동으로 들어가지 않아요.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSummary()">취소</button>
+      <button class="btn btn-primary" id="sum-send-btn" onclick="sendSummary()">발송하기</button>
     </div>
   </div>
 </div>
@@ -226,7 +258,13 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
 <div class="toast" id="toast"></div>
 
 <script>
-const PW = 'admin1234';
+// 관리자 비밀번호는 서버(Apps Script의 ADMIN_KEY)가 확인합니다. 이 파일에는 들어 있지 않아요.
+const SESSION_KEY = '1on1_admin_key';
+let adminKey = '';
+const SURVEY_API_URL_KEY = '1on1_survey_api_url';
+const DEFAULT_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
+// 설문 연락처에 저장할 때 쓰는 팀 이름 (설문 페이지의 팀 이름과 맞춤)
+const SURVEY_TEAM = {'Biz Team':'Biz팀','Product':'프로덕트팀','Commerce':'커머스팀','M&E':'마에팅팀(GA팀)','Brand':'브랜드팀'};
 const API_KEY = '1on1_api_url';
 const MEMBERS_KEY = '1on1_members';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyCkdDRoCcYtsdTiPdMPPOIXnpvxswY2Uy_JXzNz5DMzNPPUMav6bo17gvRxJ48-70U/exec';
@@ -289,17 +327,57 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 function getApiUrl(){const s=localStorage.getItem(API_KEY);return(s&&s.trim().length>0)?s:DEFAULT_API_URL;}
 
 /* ── 비밀번호 ── */
-function checkPw(){
-  if(document.getElementById('pw-input').value===PW){
-    document.getElementById('pw-screen').style.display='none';
-    document.getElementById('sidebar').style.display='flex';
-    document.getElementById('main-area').style.display='block';
-    renderSidebar();
-    renderMain();
-    loadAllFromSheet();
+function enterApp(){
+  document.getElementById('pw-screen').style.display='none';
+  document.getElementById('sidebar').style.display='flex';
+  document.getElementById('main-area').style.display='block';
+  renderSidebar();
+  renderMain();
+  loadAllFromSheet();
+  loadSlackDirectory();
+}
+
+// 비밀번호는 서버가 확인합니다 (맞으면 이번 접속 동안만 기억)
+async function checkPw(){
+  const pw=document.getElementById('pw-input').value;
+  const err=document.getElementById('pw-error');
+  if(!pw){err.textContent='비밀번호를 입력해 주세요.';return;}
+  const btn=document.querySelector('.pw-btn');
+  btn.disabled=true;btn.textContent='확인 중...';err.textContent='';
+  const res=await api({action:'auth',key:pw},{silent:true});
+  btn.disabled=false;btn.textContent='확인';
+  if(res&&res.success&&res.authRequired){
+    adminKey=pw;
+    try{sessionStorage.setItem(SESSION_KEY,pw);}catch(e){}
+    document.getElementById('pw-input').value='';
+    enterApp();
+  } else if(res&&res.success){
+    err.textContent='서버에 관리자 키(ADMIN_KEY)가 설정되어 있지 않아 접속할 수 없어요.';
+  } else if(res&&res.error==='Unauthorized'){
+    err.textContent='비밀번호가 올바르지 않습니다.';
   } else {
-    document.getElementById('pw-error').textContent='비밀번호가 올바르지 않습니다.';
+    err.textContent='서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';
   }
+}
+
+// 새로고침 시 이번 접속에서 입력한 비밀번호로 자동 로그인
+async function autoLogin(){
+  let k='';
+  try{k=sessionStorage.getItem(SESSION_KEY)||'';}catch(e){}
+  if(!k)return;
+  const res=await api({action:'auth',key:k},{silent:true});
+  if(res&&res.success&&res.authRequired){adminKey=k;enterApp();}
+  else{try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}}
+}
+
+// 서버가 키를 거부하면 로그인 화면으로 돌아감
+function onUnauthorized(){
+  adminKey='';
+  try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}
+  document.getElementById('sidebar').style.display='none';
+  document.getElementById('main-area').style.display='none';
+  document.getElementById('pw-screen').style.display='flex';
+  document.getElementById('pw-error').textContent='로그인이 만료되었거나 비밀번호가 바뀌었어요. 다시 입력해 주세요.';
 }
 
 /* ── API 설정 ── */
@@ -318,25 +396,62 @@ function saveApiUrl(){
 }
 
 /* ── API 호출 (JSONP + Base64) ── */
-function api(params){
+function api(params,opts){
   return new Promise((resolve)=>{
     const url=getApiUrl();
     if(!url||url.trim()===''){showToast('❌ API URL이 설정되지 않았습니다.');resolve(null);return;}
     const encoded={...params};
-    if(encoded.record){
-      try{encoded.record=btoa(unescape(encodeURIComponent(encoded.record)));}
-      catch(e){showToast('❌ 데이터 인코딩 실패');resolve(null);return;}
+    if(adminKey&&encoded.key===undefined)encoded.key=adminKey;
+    for(const f of ['record','data']){
+      if(encoded[f]){
+        try{encoded[f]=btoa(unescape(encodeURIComponent(encoded[f])));}
+        catch(e){showToast('❌ 데이터 인코딩 실패');resolve(null);return;}
+      }
     }
     const cbName='cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
     const qs=new URLSearchParams({...encoded,callback:cbName}).toString();
     const script=document.createElement('script');
     const timer=setTimeout(()=>{cleanup();showToast('❌ 서버 연결 시간 초과.');resolve(null);},20000);
     function cleanup(){delete window[cbName];if(script.parentNode)script.parentNode.removeChild(script);clearTimeout(timer);}
-    window[cbName]=function(data){cleanup();resolve(data);};
+    window[cbName]=function(data){
+      cleanup();
+      if(data&&data.error==='Unauthorized'&&!(opts&&opts.silent))onUnauthorized();
+      resolve(data);
+    };
     script.onerror=()=>{cleanup();showToast('❌ 서버 연결 실패.');resolve(null);};
     script.src=`${url}?${qs}`;
     document.head.appendChild(script);
   });
+}
+
+/* ── 설문 서버(Slack ID 조회용, 선택 기능) ── */
+function getSurveyApiUrl(){const s=localStorage.getItem(SURVEY_API_URL_KEY);return(s&&s.trim())?s.trim():DEFAULT_SURVEY_API_URL;}
+function surveyApi(params){
+  return new Promise((resolve)=>{
+    const enc={...params};
+    if(enc.survey){try{enc.survey=btoa(unescape(encodeURIComponent(enc.survey)));}catch(e){resolve(null);return;}}
+    const cb='scb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
+    const qs=new URLSearchParams({...enc,callback:cb}).toString();
+    const s=document.createElement('script');
+    const timer=setTimeout(()=>{cleanup();resolve(null);},15000);
+    function cleanup(){delete window[cb];if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(timer);}
+    window[cb]=d=>{cleanup();resolve(d);};
+    s.onerror=()=>{cleanup();resolve(null);};
+    s.src=`${getSurveyApiUrl()}?${qs}`;
+    document.head.appendChild(s);
+  });
+}
+
+// 이름 → Slack ID (설문 서버의 연락처 기록, 설문 DM 발송내역, 확정 응답 순으로 찾음)
+let slackDir={}, slackContacts={};
+async function loadSlackDirectory(){
+  const res=await surveyApi({action:'getSurveys'});
+  if(!res||!Array.isArray(res.surveys))return;
+  const d={}, c={}, nm=v=>String(v||'').trim();
+  res.surveys.forEach(r=>{if(r.type==='contact'&&nm(r.name)){c[nm(r.name)]=r;if(r.slackUserId)d[nm(r.name)]=r.slackUserId;}});
+  res.surveys.forEach(r=>{if(r.type==='dmLog'&&nm(r.name)&&r.slackUserId&&!d[nm(r.name)])d[nm(r.name)]=r.slackUserId;});
+  res.surveys.forEach(r=>{if(!r.type&&nm(r.name)&&r.confirmedSlack&&!d[nm(r.name)])d[nm(r.name)]=r.confirmedSlack;});
+  slackDir=d;slackContacts=c;
 }
 
 async function loadAllFromSheet(){
@@ -501,7 +616,7 @@ function cardHTML(r){
   return `<div class="record-card">
     <div class="record-card-header">
       <span class="record-date">📅 ${dt}</span>
-      <span class="record-method ${mc}">${r.method||'—'}</span>
+      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
     </div>
     <div class="record-body">
       <div class="record-field full"><label>✅ 주요 체크사항</label><p>${r.check?esc(r.check):'<span style="color:#ccc">—</span>'}</p></div>
@@ -509,6 +624,7 @@ function cardHTML(r){
       <div class="record-field full"><label>📌 비고</label><p>${r.note?esc(r.note):'<span style="color:#ccc">—</span>'}</p></div>
     </div>
     <div class="record-actions">
+      <button class="summary-btn" onclick='openSummary(${JSON.stringify(r.id)})'>${r.summarySentAt?'💬 요약 재발송':'💬 Slack 요약'}</button>
       <button class="edit-btn" onclick='openRecordModal(${JSON.stringify(r.id)})'>수정</button>
       <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.id)})'>삭제</button>
     </div>
@@ -533,6 +649,7 @@ function openRecordModal(id){
     document.getElementById('f-datetime').value='';
     document.getElementById('f-method').value='대면';
   }
+  document.getElementById('f-summary').checked=!id;   // 새 기록은 기본 체크 (발송 전 미리보기가 먼저 열려요)
   document.getElementById('modal-record').classList.add('open');
 }
 function closeRecordModal(){document.getElementById('modal-record').classList.remove('open');}
@@ -545,7 +662,11 @@ async function saveRecord(){
 
   const member=getMembers().find(m=>m.name===selectedMember);
   const editId=document.getElementById('edit-id').value;
+  const wantSummary=document.getElementById('f-summary').checked;
+  // 수정할 때 기존 기록의 다른 항목(요약 발송 이력 등)을 잃지 않도록 이어받음
+  const prevRec=editId?allRecords.find(x=>String(x.id)===String(editId)):null;
   const record={
+    ...(prevRec||{}),
     id:editId||'',
     name:selectedMember,team:member?.team||'',role:member?.role||'',
     datetime:dt,
@@ -562,6 +683,7 @@ async function saveRecord(){
     closeRecordModal();
     await loadAllFromSheet();
     showToast('✅ 기록이 저장되었습니다!');
+    if(wantSummary)openSummary(editId||res.id);   // 발송은 미리보기에서 "발송하기"를 눌러야 진행돼요
   } else {
     showToast('❌ 저장 실패. 다시 시도해 주세요.');
   }
@@ -574,12 +696,85 @@ async function deleteRecord(id){
   else showToast('❌ 삭제 실패. 다시 시도해 주세요.');
 }
 
+/* ── Slack 요약 (미리보기 → 발송) ── */
+let sumRecordId=null, sumDirSlack='';
+const DK_KO=['일','월','화','수','목','금','토'];
+function fmtKo(dt){
+  const d=new Date(dt);
+  if(!dt||isNaN(d))return dt||'';
+  const h=d.getHours();
+  return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} (${DK_KO[d.getDay()]}) ${h<12?'오전':'오후'} ${h%12||12}:${('0'+d.getMinutes()).slice(-2)}`;
+}
+// 초안에는 일시·방식·액션 아이템만 넣음 (체크사항·비고는 넣지 않음)
+function buildSummaryDraft(r){
+  const lines=[
+    '*[빌리지베이비] 원온원 요약 (with 혜민)* :blush:',
+    `${r.name}님, 원온원 시간 고마웠어요! 정리한 내용을 공유할게요.`,
+    '',
+    `📅 *일시*  ${fmtKo(r.datetime)}${r.method?' · '+r.method:''}`
+  ];
+  if(r.action&&String(r.action).trim())lines.push('🎯 *액션 아이템*',String(r.action).trim());
+  lines.push('','다음 원온원에서 또 이야기 나눠요 :raised_hands:');
+  return lines.join('\n');
+}
+function openSummary(id){
+  const r=allRecords.find(x=>String(x.id)===String(id));
+  if(!r){showToast('⚠️ 기록을 찾을 수 없어요');return;}
+  sumRecordId=id;
+  sumDirSlack=slackDir[String(r.name).trim()]||'';
+  const slack=r.summarySlackId||sumDirSlack;
+  document.getElementById('sum-name').value=r.name;
+  document.getElementById('sum-slack').value=slack;
+  document.getElementById('sum-slack-hint').textContent=slack
+    ?(r.summarySlackId?'✓ 이전에 사용한 Slack ID예요 (수정 가능)':'✓ 설문 페이지에 등록된 Slack ID가 자동 입력됐어요 (수정 가능)')
+    :'Slack ID를 찾지 못했어요. 직접 입력해 주세요. (Slack 프로필 > 멤버 ID 복사)';
+  document.getElementById('sum-text').value=buildSummaryDraft(r);
+  document.getElementById('sum-sub').textContent=r.summarySentAt
+    ?`이미 ${r.summarySentAt}에 발송했어요. 다시 보내면 같은 요약이 한 번 더 전달돼요.`
+    :'내용을 확인하고 필요하면 수정해 주세요. “발송하기”를 눌러야 전송돼요.';
+  document.getElementById('sum-send-btn').textContent=r.summarySentAt?'재발송하기':'발송하기';
+  document.getElementById('modal-summary').classList.add('open');
+}
+function closeSummary(){document.getElementById('modal-summary').classList.remove('open');}
+
+async function sendSummary(){
+  const r=allRecords.find(x=>String(x.id)===String(sumRecordId));
+  if(!r)return;
+  const slackId=document.getElementById('sum-slack').value.trim();
+  const text=document.getElementById('sum-text').value.trim();
+  if(!/^[UW][A-Z0-9]{6,}$/.test(slackId)){showToast('⚠️ Slack User ID를 확인해 주세요 (예: U0XXXXXXXXX)');return;}
+  if(!text){showToast('⚠️ 보낼 내용을 입력해 주세요');return;}
+  if(text.length>3000){showToast('⚠️ 내용이 너무 길어요 (3000자 이하)');return;}
+  if(r.summarySentAt&&!confirm(`${r.name} 님께 이미 보낸 요약이에요. 다시 보낼까요?`))return;
+  const btn=document.getElementById('sum-send-btn');
+  const label=btn.textContent;
+  btn.textContent='발송 중...';btn.disabled=true;
+  const res=await api({action:'sendSummary',data:JSON.stringify({slackUserId:slackId,text})});
+  btn.textContent=label;btn.disabled=false;
+  if(!(res&&res.success)){
+    showToast('❌ 발송 실패: '+(res&&res.error?res.error:'다시 시도해 주세요'));
+    return;
+  }
+  const sentAt=new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const sres=await api({action:'save',record:JSON.stringify({...r,summarySentAt:sentAt,summarySlackId:slackId})});
+  closeSummary();
+  showToast(sres&&sres.success?`✅ ${r.name} 님께 요약을 보냈어요`:'⚠️ 발송은 완료됐지만 발송 기록 저장에 실패했어요');
+  await loadAllFromSheet();
+  if(slackId!==sumDirSlack)saveContactSlack(r,slackId);   // 새로 입력한 Slack ID는 다음에도 자동 입력되도록 설문 연락처에 저장
+}
+async function saveContactSlack(r,slackId){
+  const name=String(r.name).trim(), prev=slackContacts[name]||{};
+  const rec={id:'ct_'+name,type:'contact',name,team:prev.team||SURVEY_TEAM[r.team]||'',email:prev.email||'',slackUserId:slackId,updatedAt:new Date().toLocaleString('ko-KR')};
+  const res=await surveyApi({action:'saveSurvey',survey:JSON.stringify(rec)});
+  if(res&&res.success){slackDir[name]=slackId;slackContacts[name]=rec;}
+}
+
 /* ── CSV ── */
 function exportCSV(){
   if(!allRecords.length){showToast('⚠️ 내보낼 기록이 없습니다');return;}
-  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각']];
+  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각','요약발송']];
   allRecords.forEach(r=>{
-    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt]
+    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt,r.summarySentAt]
       .map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
   });
   const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
@@ -591,6 +786,8 @@ function exportCSV(){
 
 document.getElementById('modal-record').addEventListener('click',function(e){if(e.target===this)closeRecordModal();});
 document.getElementById('modal-member').addEventListener('click',function(e){if(e.target===this)closeMemberModal();});
+document.getElementById('modal-summary').addEventListener('click',function(e){if(e.target===this)closeSummary();});
+autoLogin();
 </script>
 </body>
 </html>
