@@ -238,6 +238,7 @@ tr.dup-row td{background:#fffaf0;}
 // 관리자 비밀번호는 서버(Apps Script의 ADMIN_KEY)가 확인합니다. 이 파일에는 들어 있지 않아요.
 var SESSION_KEY = '1on1_admin_key';
 var adminKey = '';
+var REMINDERS = {};  // 체크인 리마인드 발송 기록 (설문 응답 id → 기록)
 var CHECKINS = {};   // 팀원 셀프 체크인 (설문 응답 id → 체크인)
 var MOOD_ICONS = ['😟','😕','😐','🙂','😄'];
 var API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
@@ -332,8 +333,9 @@ function loadSurveys(){
     // 팀원 셀프 체크인 현황 (실패해도 나머지 화면에는 영향 없음)
     api({action:'listCheckins'},{silent:true}).then(function(r){
       if(!(r&&Array.isArray(r.checkins)))return;
-      CHECKINS={};
+      CHECKINS={};REMINDERS={};
       r.checkins.forEach(function(c){CHECKINS[String(c.sid)]=c;});
+      (r.reminders||[]).forEach(function(m){if(m.ok)REMINDERS[String(m.sid)]=m;});
       render();
     });
   });
@@ -347,7 +349,10 @@ function checkinChipHTML(r){
     var title=edited?'수정한 항목: '+(c.changes||[]).join(', ')+' · 마지막 수정 '+(c.editedAt||''):'제출 '+(c.submittedAt||'');
     return '<div class="ci-chip'+(edited?' edited':'')+'" title="'+title.replace(/"/g,'&quot;')+'">📝 체크인 완료 · '+(MOOD_ICONS[c.mood-1]||'')+' · 안건 '+((c.agenda||[]).length)+(edited?' · ✏️ 수정됨 '+c.editCount+'회':'')+'</div>';
   }
-  if(r.checkinState==='ok')return '<div class="ci-chip wait">📝 체크인 대기</div>';
+  if(r.checkinState==='ok'){
+    var rm=REMINDERS[String(r.id)];
+    return '<div class="ci-chip wait">📝 체크인 대기'+(rm?' · ⏰ 리마인드 발송':'')+'</div>';
+  }
   return '';
 }
 // 체크인 마감: 확정일 하루 전 23:59 (한국 시간)
