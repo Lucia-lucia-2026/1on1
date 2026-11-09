@@ -206,6 +206,7 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
     <h2>원온원 기록</h2>
   </div>
   <div class="side-nav" id="side-nav">
+    <button data-v="dash" onclick="setView('dash')">📊 대시보드</button>
     <button data-v="teams" onclick="setView('teams')">🏢 전체 팀 현황</button>
     <button data-v="search" onclick="setView('search')">🔍 통합 검색</button>
     <button data-v="actions" onclick="setView('actions')">✅ 액션 아이템 <span class="cnt" id="act-cnt" style="display:none;"></span></button>
@@ -424,8 +425,10 @@ const AVATAR_COLORS = ['#2D7CD2','#7f77dd','#e87a5d','#4caf8a','#e6a817','#9c6dd
 
 let selectedMember = null;
 let allRecords = [];
-let viewMode = 'teams';      // teams(전체 팀) / team(팀 상세) / member(팀원) / search(통합 검색) / actions(액션 아이템)
+let viewMode = 'dash';      // teams(전체 팀) / team(팀 상세) / member(팀원) / search(통합 검색) / actions(액션 아이템)
 let selectedTeam = null;
+let scheduleList = [];       // 일정 수집·확정 페이지에서 확정한 일정 (설문 서버에서 읽어옴)
+let schedLoaded = false;     // false: 불러오는 중 / true: 완료 / 'fail': 실패
 
 /* ── 팀원 목록 (localStorage) ── */
 function getMembers() {
@@ -572,12 +575,19 @@ function surveyApi(params){
 let slackDir={}, slackContacts={};
 async function loadSlackDirectory(){
   const res=await surveyApi({action:'getSurveys'});
-  if(!res||!Array.isArray(res.surveys))return;
+  if(!res||!Array.isArray(res.surveys)){schedLoaded='fail';if(viewMode==='dash')renderMain();return;}
   const d={}, c={}, nm=v=>String(v||'').trim();
   res.surveys.forEach(r=>{if(r.type==='contact'&&nm(r.name)){c[nm(r.name)]=r;if(r.slackUserId)d[nm(r.name)]=r.slackUserId;}});
   res.surveys.forEach(r=>{if(r.type==='dmLog'&&nm(r.name)&&r.slackUserId&&!d[nm(r.name)])d[nm(r.name)]=r.slackUserId;});
   res.surveys.forEach(r=>{if(!r.type&&nm(r.name)&&r.confirmedSlack&&!d[nm(r.name)])d[nm(r.name)]=r.confirmedSlack;});
   slackDir=d;slackContacts=c;
+  // 일정 확정한 응답 → 예정된 원온원 목록
+  scheduleList=res.surveys.filter(r=>!r.type&&r.confirmed&&nm(r.name)).map(r=>{
+    const h=Array.isArray(r.sendHistory)&&r.sendHistory.length?r.sendHistory[r.sendHistory.length-1]:null;
+    return {id:String(r.id),name:nm(r.name),dt:String(r.confirmedDatetime||(h&&h.datetime)||''),method:r.confirmedMethod||(h&&h.method)||r.method||''};
+  }).filter(x=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(x.dt));
+  schedLoaded=true;
+  if(viewMode==='dash')renderMain();
 }
 
 async function loadAllFromSheet(){
@@ -925,7 +935,93 @@ function renderMain(){
   if(viewMode==='actions')return renderActionsView();
   if(viewMode==='team'&&selectedTeam)return renderTeam(selectedTeam);
   if(viewMode==='member'&&selectedMember)return renderMemberView();
-  return renderTeams();
+  if(viewMode==='teams')return renderTeams();
+  return renderDash();
+}
+
+/* ── 대시보드 · 일정 확정 연동 ── */
+function fmtSched(dt){
+  const d=new Date(dt);if(isNaN(d))return dt;
+  const h=d.getHours(),DK=['일','월','화','수','목','금','토'];
+  return (d.getMonth()+1)+'/'+d.getDate()+' ('+DK[d.getDay()]+') '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function dayDiff(dt){
+  const d=new Date(dt);if(isNaN(d))return null;
+  const t=new Date();t.setHours(0,0,0,0);
+  return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t)/86400000);
+}
+function hasRecordOnDay(name,dt){
+  const day=String(dt).slice(0,10);
+  return allRecords.some(r=>String(r.name||'').trim()===name&&String(r.datetime||'').slice(0,10)===day);
+}
+// 확정된 일정에서 바로 기록 작성 (팀원·일시·방식 자동 입력)
+function startRecordFor(name,dt,method){
+  selectMember(name);
+  openRecordModal();
+  if(dt)document.getElementById('f-datetime').value=String(dt).slice(0,16);
+  if(method==='대면'||method==='비대면(게더)')document.getElementById('f-method').value=method;
+}
+function renderDash(){
+  setHeader('대시보드','원온원이 잘 이어지고 있는지 한눈에 확인해요',false);
+  const now=new Date();
+  const active=getMembers().filter(m=>m.status!=='leave');
+  const rows=active.map(m=>{
+    const rs=getMemberRecords(m.name).slice().sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+    const thisMonth=rs.some(r=>{const d=new Date(r.datetime);return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();});
+    return {m,rs,last:rs[0],days:rs[0]?daysSince(rs[0].datetime):null,thisMonth};
+  });
+  const doneN=rows.filter(x=>x.thisMonth).length;
+  const needN=rows.filter(x=>x.days===null||x.days>=30).length;
+  const openActs=[];
+  allRecords.forEach(r=>{if(isInactiveName(r.name))return;getActions(r).forEach((a,i)=>{if(!a.done)openActs.push({r,a,i});});});
+  // 예정된 원온원 + 기록이 아직 없는 지난 일정(최근 14일)
+  const sched=scheduleList.map(x=>({...x,n:dayDiff(x.dt),rec:hasRecordOnDay(x.name,x.dt)}))
+    .filter(x=>x.n!==null&&((x.n>=0)||(x.n<0&&x.n>=-14&&!x.rec)))
+    .sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  const upcomingN=sched.filter(x=>x.n>=0).length;
+  statCards([
+    [doneN+'/'+active.length,'이번 달 원온원 진행'],
+    [needN,'30일 이상 원온원 없음(기록 없음 포함)','#c62828'],
+    [openActs.length,'미완료 액션 아이템','#e6a817'],
+    [schedLoaded===true?upcomingN:'—','예정된 원온원','#2D7CD2']
+  ]);
+  let schedHTML;
+  if(schedLoaded==='fail')schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>확정된 일정을 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p></div>';
+  else if(!schedLoaded)schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>확정된 일정을 불러오는 중이에요...</p></div>';
+  else if(!sched.length)schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>예정된 원온원이 없어요. 일정 수집 관리에서 일정을 확정하면 여기에 나와요.</p></div>';
+  else schedHTML=sched.map(x=>{
+    const mem=getMembers().find(m=>m.name===x.name)||FORMER_MEMBERS.find(m=>m.name===x.name);
+    const dd=x.n<0?`<span class="pill bad">기록 필요 · ${-x.n}일 지남</span>`:x.n===0?'<span class="pill ok">오늘</span>':`<span class="pill ${x.n<=3?'warn':'ok'}">D-${x.n}</span>`;
+    return `<div class="list-row">
+      <div style="min-width:104px;font-weight:700;font-size:13.5px;line-height:1.4;">${esc(fmtSched(x.dt))}</div>
+      <div class="lr-main"><div class="lr-name">${esc(x.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(mem?mem.team+' · '+mem.role:'명단에 없음')}</span></div>
+        <div class="lr-sub">${x.method?esc(x.method):''}</div></div>
+      ${dd}
+      <button class="btn btn-primary btn-sm" onclick='startRecordFor(${JSON.stringify(x.name)},${JSON.stringify(x.dt)},${JSON.stringify(x.method)})'>기록 시작</button>
+    </div>`;
+  }).join('');
+  // 원온원 간격 (재직자만 · 오래된 순, 기록 없는 사람은 맨 뒤)
+  const gap=rows.filter(x=>x.days!==null).sort((a,b)=>b.days-a.days).concat(rows.filter(x=>x.days===null));
+  const LIMIT=10;
+  const gapHTML=gap.slice(0,LIMIT).map(x=>`<div class="list-row click" onclick='selectMember(${JSON.stringify(x.m.name)})'>
+      <div class="member-avatar" style="background:${avatarColor(x.m.name)}">${esc(x.m.name[0])}</div>
+      <div class="lr-main"><div class="lr-name">${esc(x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(x.m.team)} · ${esc(x.m.role)}</span></div>
+        <div class="lr-sub">${x.last?'마지막 '+ymd(x.last.datetime)+' · 총 '+x.rs.length+'회':'아직 기록이 없어요'}</div></div>
+      ${gapPill(x)}</div>`).join('');
+  // 기한이 가까운 액션 (기한 있는 것 우선)
+  const dueKey=x=>x.a.due?new Date(x.a.due+'T00:00').getTime():Infinity;
+  const soon=openActs.slice().sort((a,b)=>dueKey(a)-dueKey(b)||new Date(b.r.datetime)-new Date(a.r.datetime)).slice(0,5);
+  document.getElementById('records-area').innerHTML=`
+    <div class="sec-title" style="margin-top:4px">📅 예정된 원온원 <small>일정 수집·확정 페이지와 연동 · <a href="admin_html.html" target="_blank" style="color:#2D7CD2;">일정 수집 관리 열기</a></small></div>
+    <div class="list-card">${schedHTML}</div>
+    <div class="sec-title">⏰ 원온원 간격 <small>재직자 · 오래된 순${gap.length>LIMIT?' · 상위 '+LIMIT+'명 (전체는 팀 현황에서)':''}</small></div>
+    <div class="list-card">${gapHTML||'<div class="empty-state" style="padding:1.5rem 1rem"><p>재직 팀원이 없어요</p></div>'}</div>
+    <div class="sec-title">🔥 기한이 가까운 액션 아이템 <small>재직자 · 체크하면 완료로 저장돼요</small></div>
+    <div class="list-card">${soon.length?soon.map(x=>`
+      <label class="act-big${x.a.done?' done':''}"><input type="checkbox" onchange='toggleAction(${JSON.stringify(String(x.r.id))},${x.i})'>
+        <div class="ab-main"><div class="ab-t">${esc(x.a.t)}</div>
+          <div class="ab-meta"><a data-name="${escAttr(x.r.name)}" onclick="event.preventDefault();selectMember(this.dataset.name)">${esc(x.r.name)}</a> · ${esc(recTeam(x.r))}${x.a.owner?' · 담당 '+esc(x.a.owner):''}${dueInfo(x.a)}</div></div>
+      </label>`).join(''):'<div class="empty-state" style="padding:1.5rem 1rem"><div class="icon">🎉</div><p>진행 중인 액션 아이템이 없어요</p></div>'}</div>`;
 }
 
 /* ── 팀 보기 ── */
