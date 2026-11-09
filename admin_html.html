@@ -155,6 +155,7 @@ tr.dup-row td{background:#fffaf0;}
   <button class="btn btn-primary btn-sm" onclick="exportCSV()">CSV 내보내기</button>
   <button class="btn btn-outline btn-sm" onclick="openSurveyDMModal()" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
   <button class="btn btn-outline btn-sm" onclick="openDMLogModal()">📋 DM 발송내역</button>
+  <button class="btn btn-outline btn-sm" onclick="openBulkCheckin()" style="background:#eef5fd;color:#1f5fa8;border-color:#c5dcf4;">📝 체크인 링크 일괄 발송</button>
   <button class="btn btn-danger btn-sm" onclick="clearAll()">전체 삭제</button>
 </div>
 
@@ -195,6 +196,19 @@ tr.dup-row td{background:#fffaf0;}
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeConfirmModal()">취소</button>
       <button class="btn btn-confirm" id="send-btn" onclick="sendConfirm()">✉️ 확정 + 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- 체크인 링크 일괄 발송 모달 -->
+<div class="modal-bg" id="modal-bulk-ci">
+  <div class="modal" style="max-width:560px;">
+    <h2>📝 체크인 링크 일괄 발송</h2>
+    <p class="modal-sub">체크인 링크 없이 이미 확정한 일정에 <strong>체크인 요청만</strong> 따로 보내요. 확정 안내와 캘린더 일정은 바뀌지 않아요. 보낸 일정은 리마인드 대상이 돼요.</p>
+    <div id="bulk-list" style="max-height:340px;overflow-y:auto;border:1px solid #eee;border-radius:10px;padding:4px 14px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBulkCheckin()">닫기</button>
+      <button class="btn btn-confirm" id="bulk-send-btn" onclick="sendBulkCheckin()">발송하기</button>
     </div>
   </div>
 </div>
@@ -354,6 +368,59 @@ function checkinChipHTML(r){
     return '<div class="ci-chip wait">📝 체크인 대기'+(rm?' · ⏰ 리마인드 발송':'')+'</div>';
   }
   return '';
+}
+// ── 체크인 링크 일괄 발송 ──
+// 대상: 확정했고, 체크인 링크를 아직 안 보냈고(또는 모르고), 아직 체크인이 없으며, 마감 전이고, 연락 수단(Slack ID·이메일)이 있는 일정
+function bulkCandidates(){
+  return surveys.filter(function(r){
+    if(!r.confirmed||!r.confirmedDatetime||r.type)return false;
+    if(r.checkinState==='ok'||CHECKINS[String(r.id)])return false;
+    var d=ciDeadline(r.confirmedDatetime);
+    if(!d||Date.now()>d.getTime())return false;
+    return !!((r.confirmedSlack||'').trim()||(r.confirmedEmail||'').trim());
+  }).sort(function(a,b){return String(a.confirmedDatetime).localeCompare(String(b.confirmedDatetime));});
+}
+function bulkWhen(dt){
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(dt||''));
+  if(!m)return '';
+  var d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]),h=d.getHours();
+  return (d.getMonth()+1)+'/'+d.getDate()+' ('+['일','월','화','수','목','금','토'][d.getDay()]+') '+(h<12?'오전':'오후')+' '+(h%12||12)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function openBulkCheckin(){
+  var list=bulkCandidates();
+  var box=document.getElementById('bulk-list');
+  box.innerHTML=list.length?list.map(function(r){
+    var d=ciDeadline(r.confirmedDatetime);
+    var via=[(r.confirmedSlack||'').trim()?'Slack':'',(r.confirmedEmail||'').trim()?'이메일':''].filter(Boolean).join(' · ');
+    return '<label class="bulk-row" data-id="'+String(r.id).replace(/"/g,'&quot;')+'" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3f3;font-size:13px;cursor:pointer;">'
+      +'<input type="checkbox" checked style="width:16px;height:16px;accent-color:#2D7CD2;flex-shrink:0;">'
+      +'<div style="flex:1;min-width:0;"><b>'+escHTML(r.name)+'</b> <span style="color:#888;">'+escHTML(bulkWhen(r.confirmedDatetime))+'</span>'
+      +'<div style="font-size:11.5px;color:#999;">'+escHTML(ciDeadlineText(d))+' 23:59까지 작성 · '+escHTML(via)+'</div></div>'
+      +'<span class="bulk-status" style="font-size:12px;color:#888;white-space:nowrap;"></span></label>';
+  }).join(''):'<div style="padding:2rem 0;text-align:center;color:#aaa;font-size:13px;">보낼 일정이 없어요.<br>체크인 링크가 없는 확정 일정 중 마감 전인 건이 여기에 나와요.</div>';
+  document.getElementById('bulk-send-btn').style.display=list.length?'inline-block':'none';
+  document.getElementById('bulk-send-btn').disabled=false;
+  document.getElementById('bulk-send-btn').textContent='발송하기';
+  document.getElementById('modal-bulk-ci').style.display='flex';
+}
+function closeBulkCheckin(){document.getElementById('modal-bulk-ci').style.display='none';}
+async function sendBulkCheckin(){
+  var rows=[].slice.call(document.querySelectorAll('#bulk-list .bulk-row')).filter(function(r){return r.querySelector('input').checked;});
+  if(!rows.length){showToast('⚠️ 보낼 일정을 선택해 주세요');return;}
+  if(!confirm(rows.length+'명에게 체크인 요청을 보낼까요?'))return;
+  var btn=document.getElementById('bulk-send-btn');btn.disabled=true;
+  var ok=0,fail=0;
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i],st=row.querySelector('.bulk-status');
+    btn.textContent='발송 중... '+(i+1)+'/'+rows.length;
+    st.textContent='발송 중...';
+    var res=await api({action:'sendCheckinInvite',sid:row.dataset.id});
+    if(res&&res.success){ok++;st.textContent='✓ '+(res.via||[]).join('·');st.style.color='#2e7d32';row.querySelector('input').checked=false;row.querySelector('input').disabled=true;}
+    else{fail++;st.textContent='✕ '+((res&&res.error)||'실패');st.style.color='#c62828';}
+  }
+  btn.textContent='발송하기';btn.disabled=false;
+  showToast('✅ 체크인 요청 '+ok+'건 발송'+(fail?' · 실패 '+fail+'건':''));
+  loadSurveys();
 }
 // 체크인 마감: 확정일 하루 전 23:59 (한국 시간)
 function ciDeadline(dtStr){
@@ -951,6 +1018,7 @@ function showToast(msg){
 document.getElementById('modal-confirm').onclick=function(e){if(e.target===this)closeConfirmModal();};
 document.getElementById('modal-survey-dm').onclick=function(e){if(e.target===this)closeSurveyDMModal();};
 document.getElementById('modal-dm-log').onclick=function(e){if(e.target===this)closeDMLogModal();};
+document.getElementById('modal-bulk-ci').onclick=function(e){if(e.target===this)closeBulkCheckin();};
 autoLoginAdmin();
 </script>
 </body>
