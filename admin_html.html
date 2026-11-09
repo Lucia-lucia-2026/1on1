@@ -192,9 +192,9 @@ tr.dup-row td{background:#fffaf0;}
   <div class="modal" style="max-width:400px;">
     <h2>📨 설문지 DM 발송</h2>
     <p class="modal-sub">팀원에게 Slack으로 설문지 링크를 발송합니다.</p>
-    <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동" oninput="autoFillDMTeam()"></div>
-    <div class="field"><label>팀 *</label><select id="s-team"><option value="">팀 선택</option><option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀(GA팀)</option><option>브랜드팀</option></select></div>
-    <div class="field"><label>Slack User ID *</label><input type="text" id="s-slack" placeholder="U0XXXXXXXXX"></div>
+    <div class="field"><label>팀원 이름 *</label><input type="text" id="s-name" placeholder="예: 홍길동 (이전에 입력한 팀원은 목록에서 선택)" list="known-names" autocomplete="off" oninput="autoFillDMInfo()" onchange="autoFillDMInfo()"><datalist id="known-names"></datalist></div>
+    <div class="field"><label>팀 *</label><select id="s-team" onchange="markDMManual('team')"><option value="">팀 선택</option><option>Biz팀</option><option>프로덕트팀</option><option>커머스팀</option><option>마에팅팀(GA팀)</option><option>브랜드팀</option></select><div class="auto-hint" id="s-team-hint"></div></div>
+    <div class="field"><label>Slack User ID *</label><input type="text" id="s-slack" placeholder="U0XXXXXXXXX" oninput="markDMManual('slack')"><div class="auto-hint" id="s-slack-hint"></div></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeSurveyDMModal()">취소</button>
       <button class="btn btn-confirm" id="send-survey-btn" onclick="sendSurveyDM()">📨 발송하기</button>
@@ -271,6 +271,7 @@ function loadSurveys(){
     surveys=all.filter(function(r){return r.type!=='dmLog'&&r.type!=='contact';});
     renderStats();
     renderUpcoming();
+    renderNameList();
     render();
   });
 }
@@ -597,6 +598,11 @@ function openSurveyDMModal(name,slack,team){
   document.getElementById('s-name').value=name||'';
   document.getElementById('s-slack').value=slack||'';
   document.getElementById('s-team').value=team||'';
+  dmAuto.team=false;dmAuto.slack=false;
+  document.getElementById('s-team-hint').textContent='';
+  document.getElementById('s-slack-hint').textContent='';
+  renderNameList();
+  autoFillDMInfo(); // 이름이 미리 들어온 경우, 비어 있는 칸만 이전 정보로 채움
   document.getElementById('modal-survey-dm').style.display='flex';
 }
 
@@ -642,12 +648,52 @@ function dmHintHTML(name){
   return '<div style="font-size:11px;color:#2D7CD2;margin-top:3px;font-weight:400;">📨 설문 DM '+escHTML(log.lastSentAt)+'</div>';
 }
 
-// 이름 입력 시 팀 자동 선택 (설문 응답 또는 이전 발송 기록에서)
-function autoFillDMTeam(){
-  var name=document.getElementById('s-name').value.trim(), sel=document.getElementById('s-team');
-  if(!name||sel.value)return;
-  var r=surveys.filter(function(x){return x.name===name&&x.team;})[0]||findDMLog(name);
-  if(r&&r.team)sel.value=normTeam(r.team);
+// ── 설문 DM: 이름 입력 시 팀·Slack ID 자동 입력 ──
+var dmAuto={team:false,slack:false}; // true = 자동으로 채운 값 (직접 수정하면 false)
+
+// 이전 정보 찾기. 팀: 설문 응답 → DM 발송내역 → 연락처 / Slack ID: DM 발송내역 → 연락처 → 확정 응답
+function lookupPerson(name){
+  var k=normName(name);
+  var sv=surveys.filter(function(x){return normName(x.name)===k;}).sort(function(a,b){return (Number(b.id)||0)-(Number(a.id)||0);});
+  var c=findContact(k), d=findDMLog(k);
+  var svTeam=sv.filter(function(x){return x.team;})[0], svSlack=sv.filter(function(x){return x.confirmedSlack;})[0];
+  var team=(svTeam&&svTeam.team)||(d&&d.team)||(c&&c.team)||'';
+  var slack=(d&&d.slackUserId)||(c&&c.slackUserId)||(svSlack&&svSlack.confirmedSlack)||'';
+  return {team:normTeam(team),slack:slack};
+}
+
+// 자동 입력 값은 새 이름에 맞게 바뀌고, 직접 수정한 칸은 덮어쓰지 않음
+function autoFillDMInfo(){
+  var name=normName(document.getElementById('s-name').value);
+  var teamEl=document.getElementById('s-team'), slackEl=document.getElementById('s-slack');
+  var p=name?lookupPerson(name):{team:'',slack:''};
+  if(dmAuto.team||!teamEl.value){
+    teamEl.value=p.team;
+    dmAuto.team=!!teamEl.value;
+  }
+  if(dmAuto.slack||!slackEl.value){
+    slackEl.value=p.slack;
+    dmAuto.slack=!!slackEl.value;
+  }
+  document.getElementById('s-team-hint').textContent=dmAuto.team?'✓ 이전 정보가 자동 입력됐어요 (수정 가능)':'';
+  document.getElementById('s-slack-hint').textContent=dmAuto.slack?'✓ 이전 정보가 자동 입력됐어요 (수정 가능)':'';
+}
+function markDMManual(which){
+  dmAuto[which]=false;
+  document.getElementById('s-'+which+'-hint').textContent='';
+}
+
+// 이름 입력칸 자동완성 목록: 설문 응답·DM 발송내역·연락처 기록에 있는 팀원
+function renderNameList(){
+  var seen={}, list=[];
+  function add(n,team){n=normName(n);if(!n)return;if(!seen[n])seen[n]={team:''};if(team&&!seen[n].team)seen[n].team=team;}
+  contacts.forEach(function(c){add(c.name,c.team);});
+  dmLogs.forEach(function(l){add(l.name,l.team);});
+  surveys.forEach(function(r){add(r.name,r.team);});
+  list=Object.keys(seen).sort();
+  document.getElementById('known-names').innerHTML=list.map(function(n){
+    return '<option value="'+escHTML(n)+'">'+escHTML(normTeam(seen[n].team))+'</option>';
+  }).join('');
 }
 
 // 설문 DM 발송 시각을 팀원별로 누적 기록 (Google Drive에 저장)
@@ -661,8 +707,23 @@ function recordDMLog(name,team,slack){
       dmLogs=dmLogs.filter(function(l){return String(l.id)!==record.id;});
       dmLogs.push(record);
       render();
+      renderNameList();
       if(document.getElementById('modal-dm-log').style.display==='flex')renderDMLog();
-      return true;
+      // 연락처 기록(팀·Slack ID)도 저장 — 저장 요청은 차례로 보내고, 달라진 경우에만 저장
+      var pc=findContact(name)||{};
+      var team2=record.team||pc.team||'', slack2=record.slackUserId||pc.slackUserId||'';
+      if(team2===(pc.team||'')&&slack2===(pc.slackUserId||''))return true;
+      var crec={id:'ct_'+normName(name),type:'contact',name:normName(name),team:team2,email:pc.email||'',slackUserId:slack2,updatedAt:new Date().toLocaleString('ko-KR')};
+      return api({action:'saveSurvey',survey:JSON.stringify(crec)}).then(function(cres){
+        if(cres&&cres.success){
+          contacts=contacts.filter(function(c){return String(c.id)!==crec.id;});
+          contacts.push(crec);
+          renderNameList();
+        } else {
+          showToast('⚠️ DM은 발송됐지만 연락처 기록 저장에 실패했어요');
+        }
+        return true;
+      });
     }
     showToast('⚠️ DM은 발송됐지만 발송 시각 기록에 실패했어요');
     return false;
