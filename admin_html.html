@@ -50,6 +50,34 @@ tr:hover td{background:#fdfdff;}
 tr.dup-row td{background:#fffaf0;}
 .auto-hint{font-size:11px;color:#2D7CD2;margin-top:5px;min-height:0;}
 .cal-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#1a73e8;background:#e8f0fe;padding:2px 8px;border-radius:100px;margin-top:3px;}
+/* 확정 일정 표시 */
+.conf-cell{display:flex;flex-direction:column;gap:5px;min-width:210px;}
+.when-box{border:1px solid #c5dcf4;background:#e8f1fb;border-radius:10px;padding:8px 10px;}
+.when-main{font-size:14px;font-weight:700;color:#1f5fa8;}
+.when-sub{font-size:12px;color:#777;margin-top:2px;}
+.when-old{font-size:11px;color:#aaa;text-decoration:line-through;margin-top:2px;}
+.when-note{font-size:11px;color:#777;margin-top:3px;word-break:keep-all;}
+.sent-line{font-size:11px;color:#888;line-height:1.6;}
+.slack-ok{color:#2e7d32;} .slack-fail{color:#d93025;font-weight:600;} .slack-none{color:#aaa;}
+.conf-cell details{font-size:11px;color:#aaa;}
+.conf-cell summary{cursor:pointer;}
+.hist-row{font-size:11px;color:#aaa;padding:2px 0;}
+.upcoming-wrap{margin-bottom:1.5rem;}
+.upcoming-title{font-size:14px;font-weight:700;color:#333;margin-bottom:8px;}
+.upcoming-title span{font-weight:400;font-size:12px;color:#999;margin-left:6px;}
+.upcoming{background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
+.up-row{display:grid;grid-template-columns:104px 1fr auto;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid #f5f5f5;}
+.up-row:last-child{border-bottom:none;}
+.up-row.today{background:#e8f1fb;}
+.up-row.past{opacity:.55;}
+.up-date{font-size:14px;font-weight:700;line-height:1.35;color:#222;}
+.up-who{font-size:14px;font-weight:600;color:#222;}
+.up-who span{font-weight:400;color:#888;font-size:12px;margin-left:6px;}
+.up-note{font-size:12px;color:#888;margin-top:2px;}
+.dday{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:#2D7CD2;color:#fff;white-space:nowrap;}
+.dday.soon{background:#e24b4a;}
+.dday.past{background:#eee;color:#999;}
+@media (max-width:560px){.up-row{grid-template-columns:84px 1fr;}.up-row .dday{grid-column:2;justify-self:start;}}
 .pw-screen{position:fixed;inset:0;background:#f5f5f0;display:flex;align-items:center;justify-content:center;z-index:9999;}
 .pw-box{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
 .pw-box h2{font-size:18px;font-weight:600;margin-bottom:6px;}
@@ -94,6 +122,8 @@ tr.dup-row td{background:#fffaf0;}
 
 <div class="stat-grid" id="stat-grid"></div>
 
+<div class="upcoming-wrap" id="upcoming"></div>
+
 <div class="toolbar">
   <input type="text" id="search" placeholder="이름 검색..." oninput="render()" style="width:140px;">
   <select id="f-team" onchange="render()">
@@ -109,6 +139,10 @@ tr.dup-row td{background:#fffaf0;}
     <option value="confirmed">확정 완료</option>
     <option value="pending">미확정</option>
     <option value="dup">중복 제출만</option>
+  </select>
+  <select id="f-sort" onchange="render()">
+    <option value="">정렬: 제출순</option>
+    <option value="confirm">정렬: 확정 일정 빠른순</option>
   </select>
   <button class="btn btn-primary btn-sm" onclick="exportCSV()">CSV 내보내기</button>
   <button class="btn btn-outline btn-sm" onclick="openSurveyDMModal()" style="background:#e8f4ff;color:#2D7CD2;border-color:#c0d8f0;">📨 설문 DM 발송</button>
@@ -236,6 +270,7 @@ function loadSurveys(){
     contacts=all.filter(function(r){return r.type==='contact';});
     surveys=all.filter(function(r){return r.type!=='dmLog'&&r.type!=='contact';});
     renderStats();
+    renderUpcoming();
     render();
   });
 }
@@ -256,7 +291,61 @@ function dupBadgeHTML(r,dupMap){
   return '<div class="dup-badge" title="같은 이름으로 설문을 여러 번 제출했어요">🔁 중복 제출 · '+n+'/'+g.length+'번째</div>';
 }
 
+// ── 확정 일정 표시 ──
+var DAY_KO=['일','월','화','수','목','금','토'];
+function parseDT(s){
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s||''));
+  return m?new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]):null;
+}
+function fmtDate(d){return (d.getMonth()+1)+'/'+d.getDate()+' ('+DAY_KO[d.getDay()]+')';}
+function fmtTime(d){var h=d.getHours();return (h<12?'오전':'오후')+' '+(h%12||12)+':'+('0'+d.getMinutes()).slice(-2);}
+function fmtDT(d){return fmtDate(d)+' '+fmtTime(d);}
+// 오늘 기준 남은 일수 (0=오늘, 음수=지남)
+function ddayNum(d){
+  var t=new Date();t.setHours(0,0,0,0);
+  return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t)/86400000);
+}
+function ddayLabel(n){return n===0?'D-DAY':(n>0?'D-'+n:'지남');}
+// 확정 일시: 저장된 확정 일시, 없으면 마지막 발송 이력의 일시
+function confirmedDate(r){
+  if(!r||!r.confirmed)return null;
+  var h=r.sendHistory||[];
+  return parseDT(r.confirmedDatetime)||(h.length?parseDT(h[h.length-1].datetime):null);
+}
+function methodLabel(m){return m==='대면'?'🏢 대면':(m?'💻 '+m:'');}
+// Slack 발송 결과 표시 (예전 기록처럼 결과가 없으면 빈 문자열)
+function slackLabelHTML(st){
+  if(st==='ok')return '<span class="slack-ok">📨 Slack DM 발송 완료</span>';
+  if(st==='fail')return '<span class="slack-fail">⚠️ Slack DM 발송 실패</span>';
+  if(st==='none')return '<span class="slack-none">Slack DM 미발송</span>';
+  return '';
+}
+function lastSend(r){var h=r.sendHistory||[];return h.length?h[h.length-1]:null;}
+
+function renderUpcoming(){
+  var el=document.getElementById('upcoming');
+  var items=surveys.map(function(r){return {r:r,d:confirmedDate(r)};}).filter(function(x){return x.d;});
+  if(!items.length){el.innerHTML='';return;}
+  var up=items.filter(function(x){return ddayNum(x.d)>=0;}).sort(function(a,b){return a.d-b.d;});
+  var past=items.filter(function(x){return ddayNum(x.d)<0;}).sort(function(a,b){return b.d-a.d;}).slice(0,3);
+  var rows=up.concat(past).map(function(x){
+    var r=x.r,n=ddayNum(x.d),isPast=n<0,ls=lastSend(r);
+    var notes=[];
+    var sl=slackLabelHTML(ls&&ls.slack);if(sl)notes.push(sl);
+    if((r.sendHistory||[]).length>1)notes.push('일정 '+((r.sendHistory||[]).length-1)+'회 변경');
+    if(r.confirmedNote)notes.push('📝 '+escHTML(r.confirmedNote));
+    return '<div class="up-row'+(n===0?' today':'')+(isPast?' past':'')+'">'
+      +'<div class="up-date">'+fmtDate(x.d)+'<br>'+fmtTime(x.d)+'</div>'
+      +'<div><div class="up-who">'+escHTML(r.name)+'<span>'+escHTML(normTeam(r.team))+' · '+escHTML(methodLabel(r.confirmedMethod||r.method))+'</span></div>'
+      +(notes.length?'<div class="up-note">'+notes.join(' · ')+'</div>':'')+'</div>'
+      +'<span class="dday'+(isPast?' past':(n<=3?' soon':''))+'">'+(isPast?'완료':ddayLabel(n))+'</span>'
+      +'</div>';
+  }).join('');
+  el.innerHTML='<div class="upcoming-title">📅 확정된 일정<span>다가오는 일정 '+up.length+'건 · 날짜순</span></div><div class="upcoming">'+rows+'</div>';
+}
+
 function renderStats(){
+  var upcomingN=surveys.filter(function(r){var d=confirmedDate(r);return d&&ddayNum(d)>=0;}).length;
   var dupMap=buildDupMap();
   var dupPeople=Object.keys(dupMap).filter(function(k){return dupMap[k].length>1;}).length;
   var confirmed=surveys.filter(function(r){return r.confirmed;}).length;
@@ -266,7 +355,8 @@ function renderStats(){
     +'<div class="stat"><div class="stat-num">'+surveys.filter(function(r){return r.method==='비대면(게더)';}).length+'</div><div class="stat-label">비대면 희망</div></div>'
     +'<div class="stat"><div class="stat-num" style="color:#2D7CD2;">'+confirmed+'</div><div class="stat-label">확정 완료</div></div>'
     +'<div class="stat"><div class="stat-num" style="color:#e6a817;">'+(surveys.length-confirmed)+'</div><div class="stat-label">미확정</div></div>'
-    +'<div class="stat"><div class="stat-num" style="color:#c27a00;">'+dupPeople+'</div><div class="stat-label">중복 제출자</div></div>';
+    +'<div class="stat"><div class="stat-num" style="color:#c27a00;">'+dupPeople+'</div><div class="stat-label">중복 제출자</div></div>'
+    +'<div class="stat"><div class="stat-num" style="color:#2D7CD2;">'+upcomingN+'</div><div class="stat-label">다가오는 일정</div></div>';
 }
 
 function render(){
@@ -292,6 +382,17 @@ function render(){
       return (Number(a.id)||0)-(Number(b.id)||0);
     });
   }
+  // 확정 일정 빠른순: 다가오는 일정은 가까운 순, 지난 일정은 최근 순으로 뒤에, 미확정은 맨 뒤
+  if(document.getElementById('f-sort').value==='confirm'){
+    var rank=function(r){var d=confirmedDate(r);return d?{g:ddayNum(d)>=0?0:1,d:d}:{g:2,d:null};};
+    filtered.sort(function(a,b){
+      var ra=rank(a),rb=rank(b);
+      if(ra.g!==rb.g)return ra.g-rb.g;
+      if(ra.g===0)return ra.d-rb.d;
+      if(ra.g===1)return rb.d-ra.d;
+      return 0;
+    });
+  }
   var tbody=document.getElementById('tbody');
   if(!filtered.length){tbody.innerHTML='<tr><td colspan="9" class="empty">응답이 없습니다.</td></tr>';return;}
   tbody.innerHTML=filtered.map(function(r){
@@ -299,16 +400,33 @@ function render(){
     var tc=getTeamClass(r.team);
     var dates=(r.dates||[]).map(function(d){return '<span class="tag">'+d+'</span>';}).join('');
     var times=(r.times||[]).map(function(t){return '<span class="tag">'+t+'</span>';}).join('');
-    var historyHTML=(r.sendHistory||[]).slice().reverse().map(function(h,i){
-      return '<div style="font-size:11px;color:#aaa;padding:2px 0;">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+h.sentAt+' · '+h.method+'</div>';
+    var hist=r.sendHistory||[];
+    var historyHTML=hist.slice().reverse().map(function(h,i){
+      var hd=parseDT(h.datetime);
+      return '<div class="hist-row">'+(i===0?'<span style="color:#2D7CD2;font-weight:600;">최근</span> ':'')+escHTML(h.sentAt)+' 발송 · '+(hd?escHTML(fmtDT(hd))+' · ':'')+escHTML(h.method)+(h.slack?' · '+slackLabelHTML(h.slack):'')+'</div>';
     }).join('');
     var calBadge=r.calendarEventId?'<div class="cal-badge">📅 캘린더 등록됨</div>':'';
+    var cd=confirmedDate(r), ls=lastSend(r), prevH=hist.length>1?hist[hist.length-2]:null;
+    var prevD=prevH&&ls&&prevH.datetime!==ls.datetime?parseDT(prevH.datetime):null;
+    var whenHTML=cd
+      ?'<div class="when-box">'
+        +'<div class="when-main">📅 '+escHTML(fmtDT(cd))+'</div>'
+        +'<div class="when-sub">'+escHTML(methodLabel(r.confirmedMethod||r.method))+' · '+(ddayNum(cd)<0?'지난 일정':ddayLabel(ddayNum(cd)))+'</div>'
+        +(prevD?'<div class="when-old">이전: '+escHTML(fmtDT(prevD))+'</div>':'')
+        +(r.confirmedNote?'<div class="when-note">📝 '+escHTML(r.confirmedNote)+'</div>':'')
+        +'</div>'
+      :'';
+    var sentHTML=ls
+      ?'<div class="sent-line">✉️ 이메일 '+escHTML(ls.sentAt)+(ls.slack?'<br>'+slackLabelHTML(ls.slack):'')+'</div>'
+      :'';
     var confirmCell=r.confirmed
-      ?'<div style="display:flex;flex-direction:column;gap:4px;">'
-        +'<div class="confirmed-badge">✅ 확정 ('+(r.sendHistory?r.sendHistory.length:1)+'회 발송)</div>'
+      ?'<div class="conf-cell">'
+        +'<div class="confirmed-badge">✅ 확정 ('+(hist.length||1)+'회 발송)</div>'
+        +whenHTML
+        +sentHTML
         +calBadge
-        +'<div style="margin-top:2px;">'+historyHTML+'</div>'
-        +'<button class="confirm-btn" style="margin-top:4px;" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',true)">재발송 →</button>'
+        +(hist.length>1?'<details><summary>발송 이력 '+hist.length+'회</summary>'+historyHTML+'</details>':'')
+        +'<button class="confirm-btn" style="margin-top:2px;align-self:flex-start;" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',true)">재발송 →</button>'
         +'</div>'
       :'<button class="confirm-btn" onclick="openConfirmModal(\''+r.id+'\',\''+r.name+'\',\''+r.method+'\',false)">일정 확정 →</button>';
     var isDup=(dupMap[normName(r.name)]||[]).length>1;
@@ -411,7 +529,9 @@ function sendConfirm(){
         if(idx>=0){
           var sentAt=new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
           if(!surveys[idx].sendHistory)surveys[idx].sendHistory=[];
-          surveys[idx].sendHistory.push({sentAt:sentAt,datetime:datetime,method:method,note:note,email:email});
+          // Slack 발송 결과도 함께 저장: ok(완료) / fail(실패) / none(Slack ID 미입력)
+          var slackStatus=slackUserId?(slackResult&&slackResult.success?'ok':'fail'):'none';
+          surveys[idx].sendHistory.push({sentAt:sentAt,datetime:datetime,method:method,note:note,email:email,slack:slackStatus});
           surveys[idx].confirmed=true;
           surveys[idx].confirmedAt=new Date(datetime).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
           surveys[idx].confirmedEmail=email;
