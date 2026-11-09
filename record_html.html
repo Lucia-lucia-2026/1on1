@@ -263,6 +263,14 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
         <option value="비대면(게더)">💻 비대면(게더)</option>
       </select>
     </div>
+    <div class="field">
+      <label>템플릿 <span style="font-weight:400;color:#aaa;">(고르면 체크사항 작성 틀이 채워져요)</span></label>
+      <div class="tag-pick" id="f-tpl"></div>
+    </div>
+    <div class="field">
+      <label>컨디션 <span style="font-weight:400;color:#aaa;">(관리자가 관찰한 팀원 상태 · 팀원에게는 보이지 않아요)</span></label>
+      <div class="tag-pick" id="f-mood"></div>
+    </div>
     <div class="field"><label>주요 체크사항</label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
     <div class="field">
       <label>액션 아이템 <span style="font-weight:400;color:#aaa;">(담당·기한은 선택, 완료는 체크)</span></label>
@@ -421,6 +429,18 @@ function isLeaveName(n){const m=getMembers().find(x=>x.name===String(n||'').trim
 function isInactiveName(n){return isFormerName(n)||isLeaveName(n);}
 
 const TEAM_ORDER = ['Biz팀','프로덕트팀','커머스팀','마에팅팀(GA팀)','브랜드팀','Etc'];
+// 원온원 간격 기준: 3개월(90일) 이상 없으면 '원온원 필요', 2개월(60일) 이상이면 주의
+const NEED_DAYS = 90, WARN_DAYS = 60;
+const NEED_LABEL = '3개월 이상 원온원 없음(기록 없음 포함)';
+// 컨디션(관리자 관찰)·템플릿
+const MOOD_ICONS = ['😟','😕','😐','🙂','😄'];
+const MOOD_LABELS = ['힘들어 보여요','조금 지쳐 보여요','보통','괜찮아 보여요','좋아 보여요'];
+const TEMPLATES = {
+  '정기':'▪ 지난 기간 업무·성과\n▪ 막힌 점, 필요한 지원\n▪ 요즘 컨디션',
+  '온보딩':'▪ 적응 상태\n▪ 업무·툴 이해도\n▪ 궁금한 점',
+  '성장·커리어':'▪ 커리어 목표\n▪ 배우고 싶은 것\n▪ 피드백 주고받기',
+  '이슈 대응':'▪ 이슈 내용\n▪ 영향·원인\n▪ 합의한 대응'
+};
 const AVATAR_COLORS = ['#2D7CD2','#7f77dd','#e87a5d','#4caf8a','#e6a817','#9c6dd8'];
 
 let selectedMember = null;
@@ -784,7 +804,7 @@ function renderMemberView(){
     <div class="stat-card"><div class="stat-num">${records.length}</div><div class="stat-label">총 원온원 횟수</div></div>
     <div class="stat-card"><div class="stat-num">${face}</div><div class="stat-label">대면</div></div>
     <div class="stat-card"><div class="stat-num">${gather}</div><div class="stat-label">비대면(게더)</div></div>
-    <div class="stat-card"><div class="stat-num" style="font-size:16px;padding-top:4px;">${last}</div><div class="stat-label">마지막 원온원</div></div>`;
+    <div class="stat-card"><div class="stat-num" style="font-size:16px;padding-top:4px;">${last}</div><div class="stat-label">마지막 원온원</div></div>${moodCardHTML(records)}`;
 
   if(!records.length){
     area.innerHTML=`<div class="empty-state"><div class="icon">📝</div><p>${selectedMember} 님의 원온원 기록이 없어요.<br><strong>+ 기록 추가</strong>로 첫 기록을 남겨보세요!</p></div>`;
@@ -798,6 +818,35 @@ const PRESET_TAGS = ['커리어','보상','컨디션','협업','업무량','피�
 const SRCH = {q:'',team:'',method:'',period:'',tags:[],openOnly:false};
 const ACTV = {status:'open',team:''};
 let curTags = [];
+let curTpl = '', curMood = 0, lastTplText = '';
+function renderTplPick(){
+  document.getElementById('f-tpl').innerHTML=Object.keys(TEMPLATES).map(k=>`<button type="button" class="${curTpl===k?'on':''}" data-k="${escAttr(k)}" onclick="setTpl(this.dataset.k)">${esc(k)}</button>`).join('');
+}
+// 템플릿을 고르면 체크사항이 비어 있을 때(또는 이전 템플릿 틀 그대로일 때)만 틀을 채워요
+function setTpl(k){
+  curTpl=curTpl===k?'':k;
+  const el=document.getElementById('f-check');
+  if(curTpl){
+    if(!el.value.trim()||el.value===lastTplText){el.value=TEMPLATES[curTpl];lastTplText=TEMPLATES[curTpl];}
+  } else if(el.value===lastTplText){el.value='';lastTplText='';}
+  renderTplPick();
+}
+function renderMoodPick(){
+  document.getElementById('f-mood').innerHTML=MOOD_ICONS.map((e,i)=>`<button type="button" class="${curMood===i+1?'on':''}" onclick="setMood(${i+1})">${e} ${MOOD_LABELS[i]}</button>`).join('');
+}
+function setMood(v){curMood=curMood===v?0:v;renderMoodPick();}
+// 최근 컨디션 카드 (개인 기록 화면)
+function moodCardHTML(recs){
+  const ms=recs.filter(r=>Number(r.mood)>0);
+  if(!ms.length)return '';
+  const pts=ms.slice(0,8).reverse();
+  let spark='';
+  if(pts.length>=2){
+    const w=120,h=30,x=i=>4+i*(w-8)/(pts.length-1),y=v=>h-4-(v-1)*(h-8)/4;
+    spark=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="30" preserveAspectRatio="none"><polyline points="${pts.map((r,i)=>x(i)+','+y(Number(r.mood))).join(' ')}" fill="none" stroke="#2D7CD2" stroke-width="2"/>${pts.map((r,i)=>`<circle cx="${x(i)}" cy="${y(Number(r.mood))}" r="3" fill="#2D7CD2"/>`).join('')}</svg>`;
+  }
+  return `<div class="stat-card"><div class="stat-num" style="font-size:24px;">${MOOD_ICONS[Number(ms[0].mood)-1]}</div><div class="stat-label">최근 컨디션 (관리자 관찰)</div>${spark}</div>`;
+}
 
 function escAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 // 검색어 강조: 조각마다 이스케이프해서 태그가 깨지지 않게 함
@@ -900,7 +949,7 @@ function cardHTML(r,opt){
   return `<div class="record-card">
     <div class="record-card-header">
       <span class="record-date">📅 ${dt}${who}</span>
-      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
+      <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${r.tpl?`<span class="tag-chip" style="background:#eef0f4;color:#556;">${esc(r.tpl)}</span>`:''}${r.mood?`<span title="컨디션 ${r.mood}/5 (관리자 관찰)" style="font-size:17px;">${MOOD_ICONS[r.mood-1]||''}</span>`:''}${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
     </div>
     ${tags?`<div class="tag-row">${tags}</div>`:''}
     <div class="record-body">
@@ -971,7 +1020,7 @@ function renderDash(){
     return {m,rs,last:rs[0],days:rs[0]?daysSince(rs[0].datetime):null,thisMonth};
   });
   const doneN=rows.filter(x=>x.thisMonth).length;
-  const needN=rows.filter(x=>x.days===null||x.days>=30).length;
+  const needN=rows.filter(x=>x.days===null||x.days>=NEED_DAYS).length;
   const openActs=[];
   allRecords.forEach(r=>{if(isInactiveName(r.name))return;getActions(r).forEach((a,i)=>{if(!a.done)openActs.push({r,a,i});});});
   // 예정된 원온원 + 기록이 아직 없는 지난 일정(최근 14일)
@@ -979,11 +1028,15 @@ function renderDash(){
     .filter(x=>x.n!==null&&((x.n>=0)||(x.n<0&&x.n>=-14&&!x.rec)))
     .sort((a,b)=>new Date(a.dt)-new Date(b.dt));
   const upcomingN=sched.filter(x=>x.n>=0).length;
+  const latestMoods=rows.map(x=>({x,r:x.rs.find(r=>Number(r.mood)>0)})).filter(o=>o.r);
+  const avgMood=latestMoods.length?(latestMoods.reduce((a,o)=>a+Number(o.r.mood),0)/latestMoods.length).toFixed(1):null;
+  const lowMood=latestMoods.filter(o=>Number(o.r.mood)<=2);
   statCards([
     [doneN+'/'+active.length,'이번 달 원온원 진행'],
-    [needN,'30일 이상 원온원 없음(기록 없음 포함)','#c62828'],
+    [needN,NEED_LABEL,'#c62828'],
     [openActs.length,'미완료 액션 아이템','#e6a817'],
-    [schedLoaded===true?upcomingN:'—','예정된 원온원','#2D7CD2']
+    [schedLoaded===true?upcomingN:'—','예정된 원온원','#2D7CD2'],
+    [avgMood||'—','최근 평균 컨디션 (5점)']
   ]);
   let schedHTML;
   if(schedLoaded==='fail')schedHTML='<div class="empty-state" style="padding:1.5rem 1rem"><p>확정된 일정을 불러오지 못했어요. 잠시 후 새로고침해 주세요.</p></div>';
@@ -1016,6 +1069,12 @@ function renderDash(){
     <div class="list-card">${schedHTML}</div>
     <div class="sec-title">⏰ 원온원 간격 <small>재직자 · 오래된 순${gap.length>LIMIT?' · 상위 '+LIMIT+'명 (전체는 팀 현황에서)':''}</small></div>
     <div class="list-card">${gapHTML||'<div class="empty-state" style="padding:1.5rem 1rem"><p>재직 팀원이 없어요</p></div>'}</div>
+    ${lowMood.length?`<div class="sec-title">💛 컨디션을 살펴보세요 <small>최근 기록의 컨디션이 낮았던 재직자 · 관리자만 보여요</small></div>
+    <div class="list-card">${lowMood.map(o=>`<div class="list-row click" onclick='selectMember(${JSON.stringify(o.x.m.name)})'>
+      <div class="member-avatar" style="background:${avatarColor(o.x.m.name)}">${esc(o.x.m.name[0])}</div>
+      <div class="lr-main"><div class="lr-name">${esc(o.x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(o.x.m.team)} · ${esc(o.x.m.role)}</span></div>
+        <div class="lr-sub">${ymd(o.r.datetime)} 기록 · ${esc(MOOD_LABELS[Number(o.r.mood)-1])}</div></div>
+      <span style="font-size:22px;">${MOOD_ICONS[Number(o.r.mood)-1]}</span></div>`).join('')}</div>`:''}
     <div class="sec-title">🔥 기한이 가까운 액션 아이템 <small>재직자 · 체크하면 완료로 저장돼요</small></div>
     <div class="list-card">${soon.length?soon.map(x=>`
       <label class="act-big${x.a.done?' done':''}"><input type="checkbox" onchange='toggleAction(${JSON.stringify(String(x.r.id))},${x.i})'>
@@ -1040,14 +1099,16 @@ function teamStats(team){
     const rs=getMemberRecords(m.name).slice().sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
     return {m,rs,last:rs[0]};
   }).filter(x=>x.rs.length);
-  return {team,ms,rows,lRows,fRows,
+  const moodVals=rows.map(x=>x.rs.find(r=>Number(r.mood)>0)).filter(Boolean).map(r=>Number(r.mood));
+  const avgMood=moodVals.length?(moodVals.reduce((a,b)=>a+b,0)/moodVals.length).toFixed(1):null;
+  return {team,ms,rows,lRows,fRows,avgMood,
     total:rows.concat(lRows).reduce((n,x)=>n+x.rs.length,0)+fRows.reduce((n,x)=>n+x.rs.length,0),
     open:rows.reduce((n,x)=>n+x.open,0),   // 휴직자의 액션은 진행 중에서 제외
-    need:rows.filter(x=>x.days===null||x.days>=30).length};
+    need:rows.filter(x=>x.days===null||x.days>=NEED_DAYS).length};
 }
 function gapPill(x){
   if(x.days===null)return '<span class="pill gray">기록 없음</span>';
-  return `<span class="pill ${x.days>=30?'bad':x.days>=21?'warn':'ok'}">${x.days}일 전</span>`;
+  return `<span class="pill ${x.days>=NEED_DAYS?'bad':x.days>=WARN_DAYS?'warn':'ok'}">${x.days}일 전</span>`;
 }
 function statCards(items){
   const el=document.getElementById('stat-row');
@@ -1063,7 +1124,7 @@ function renderTeams(){
     ...(all.some(s=>s.lRows.length)?[[all.reduce((n,s)=>n+s.lRows.length,0),'육아휴직']]:[]),
     [all.reduce((n,s)=>n+s.total,0),'누적 원온원 기록'],
     [all.reduce((n,s)=>n+s.open,0),'미완료 액션 아이템','#e6a817'],
-    [all.reduce((n,s)=>n+s.need,0),'30일 이상 원온원 없음(기록 없음 포함)','#c62828']
+    [all.reduce((n,s)=>n+s.need,0),NEED_LABEL,'#c62828']
   ]);
   document.getElementById('records-area').innerHTML=`<div class="team-grid">${all.map(s=>`
     <div class="team-card" onclick="openTeam('${s.team}')">
@@ -1077,7 +1138,7 @@ function renderTeams(){
 function renderTeam(team){
   const s=teamStats(team);
   setHeader(team,`${s.ms.length}명${s.lRows.length?' · 육아휴직 '+s.lRows.length+'명':''} · 누적 원온원 ${s.total}회`,false);
-  statCards([[s.ms.length,'재직 팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,'30일 이상 원온원 없음(기록 없음 포함)','#c62828']]);
+  statCards([[s.ms.length,'재직 팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,NEED_LABEL,'#c62828'],[s.avgMood||'—','최근 평균 컨디션 (5점)']]);
   const tagCnt={};
   [...s.rows,...s.lRows,...s.fRows].forEach(x=>x.rs.forEach(r=>(r.tags||[]).forEach(t=>tagCnt[t]=(tagCnt[t]||0)+1)));
   const tags=Object.entries(tagCnt).sort((a,b)=>b[1]-a[1]);
@@ -1142,7 +1203,7 @@ function doSearch(){
     if(SRCH.tags.length&&!SRCH.tags.every(t=>(r.tags||[]).includes(t)))return false;
     if(SRCH.openOnly&&(isInactiveName(r.name)||!getActions(r).some(a=>!a.done)))return false;
     if(!toks.length)return true;
-    const hay=[r.name,recTeam(r),r.role,r.check,r.note,r.action,...getActions(r).map(a=>a.t+' '+(a.owner||'')),...(r.tags||[]).map(t=>'#'+t+' '+t)].join(' ').toLowerCase();
+    const hay=[r.name,recTeam(r),r.role,r.tpl,r.check,r.note,r.action,...getActions(r).map(a=>a.t+' '+(a.owner||'')),...(r.tags||[]).map(t=>'#'+t+' '+t)].join(' ').toLowerCase();
     return toks.every(t=>hay.includes(t));
   }).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
   const LIMIT=100;
@@ -1199,6 +1260,8 @@ function openRecordModal(id){
   curTags=cur&&Array.isArray(cur.tags)?[...cur.tags]:[];
   renderTagPick();
   document.getElementById('f-tag-new').value='';
+  curTpl=cur&&cur.tpl?cur.tpl:'';curMood=cur&&cur.mood?Number(cur.mood):0;lastTplText='';
+  renderTplPick();renderMoodPick();
   document.getElementById('f-summary').checked=!id;   // 새 기록은 기본 체크 (발송 전 미리보기가 먼저 열려요)
   document.getElementById('modal-record').classList.add('open');
 }
@@ -1226,6 +1289,8 @@ async function saveRecord(){
     action:actionsList.map(a=>a.t).join('\n'),   // 예전 화면·Slack 요약과 호환되도록 글로도 함께 저장
     actions:actionsList,
     tags:[...curTags],
+    tpl:curTpl,
+    mood:curMood,
     note:document.getElementById('f-note').value.trim(),
     updatedAt:new Date().toLocaleString('ko-KR')
   };
@@ -1325,9 +1390,9 @@ async function saveContactSlack(r,slackId){
 /* ── CSV ── */
 function exportCSV(){
   if(!allRecords.length){showToast('⚠️ 내보낼 기록이 없습니다');return;}
-  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각','요약발송','태그','액션 완료']];
+  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각','요약발송','태그','액션 완료','템플릿','컨디션(관리자 관찰)']];
   allRecords.forEach(r=>{
-    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt,r.summarySentAt,(r.tags||[]).join(' / '),(function(){const a=getActions(r);return a.length?a.filter(x=>x.done).length+'/'+a.length:'';})()]
+    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt,r.summarySentAt,(r.tags||[]).join(' / '),(function(){const a=getActions(r);return a.length?a.filter(x=>x.done).length+'/'+a.length:'';})(),r.tpl||'',r.mood||'']
       .map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
   });
   const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
