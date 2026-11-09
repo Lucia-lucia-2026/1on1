@@ -141,7 +141,11 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
 .tc-avs{display:flex;}
 .tc-avs .member-avatar{width:26px;height:26px;font-size:11px;margin-right:-4px;border:2px solid #fff;}
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;white-space:nowrap;}
-.pill.ok{background:#e8f5e9;color:#2e7d32;} .pill.warn{background:#fff1d6;color:#9a5b00;} .pill.bad{background:#fdeaea;color:#c62828;} .pill.gray{background:#f0f0f0;color:#888;} .pill.leave{background:#e8f1fb;color:#1f5fa8;}
+.pill.ok{background:#e8f5e9;color:#2e7d32;} .pill.warn{background:#fff1d6;color:#9a5b00;} .pill.bad{background:#fdeaea;color:#c62828;} .imp-row{display:flex;gap:8px;align-items:center;padding:7px 0;font-size:13px;border-bottom:1px solid #f5f5f5;}
+.imp-row:last-child{border-bottom:none;}
+.imp-row input{width:16px;height:16px;accent-color:#2D7CD2;flex-shrink:0;}
+.imp-row span{color:#888;font-size:12px;}
+.pill.gray{background:#f0f0f0;color:#888;} .pill.leave{background:#e8f1fb;color:#1f5fa8;}
 .member-item.on-leave{opacity:.78;}
 .sec-title{font-size:14px;font-weight:700;margin:22px 0 10px;}
 .sec-title small{font-weight:400;color:#999;font-size:12px;margin-left:6px;}
@@ -243,6 +247,12 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
         <button onclick="saveApiUrl()">저장</button>
       </div>
     </div>
+  </div>
+
+  <div class="setup-banner" id="members-banner">
+    <div style="font-size:20px;flex-shrink:0;">👥</div>
+    <div style="flex:1;"><div class="mb-text"></div></div>
+    <button class="btn btn-primary btn-sm mb-btn" onclick="openImportModal()" style="align-self:center;display:none;">서버에 올리기</button>
   </div>
 
   <div class="main-header">
@@ -347,6 +357,22 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
   </div>
 </div>
 
+<!-- 팀원 목록을 서버에 올리기 -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal" style="max-width:520px;">
+    <h2>👥 팀원 목록을 서버에 올리기</h2>
+    <p style="font-size:13px;color:#888;line-height:1.7;margin:-0.75rem 0 1rem;">이 브라우저에 저장된 팀원 목록을 서버로 옮겨요. 한 번만 하면 돼요. 올린 뒤에는 모든 관리자가 같은 목록을 쓰고, 이 브라우저에 남은 예전 목록은 지워져요.</p>
+    <div id="imp-summary" style="font-size:14px;font-weight:700;margin-bottom:14px;"></div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px;">기록은 있지만 목록에 없는 이름 <span style="font-weight:400;color:#888;">(체크하면 퇴사자로 함께 등록돼요)</span></div>
+    <div style="font-size:12px;color:#999;line-height:1.6;margin-bottom:8px;">퇴사자가 아닌 이름(오타 등)은 체크를 해제해 주세요. 직무·팀은 마지막 기록 기준이에요.</div>
+    <div id="imp-former" style="max-height:240px;overflow-y:auto;border:1px solid #eee;border-radius:10px;padding:6px 12px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeImportModal()">취소</button>
+      <button class="btn btn-primary" id="imp-btn" onclick="doImportMembers()">서버에 올리기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 팀원 추가/수정 모달 -->
 <div class="modal-bg" id="modal-member">
   <div class="modal" style="max-width:400px;">
@@ -376,6 +402,7 @@ mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
       <select id="m-status">
         <option value="">재직</option>
         <option value="leave">🍼 육아휴직</option>
+        <option value="former">🕊️ 퇴사 (이전 기록만 보관)</option>
       </select>
     </div>
     <div class="modal-footer">
@@ -401,55 +428,12 @@ const API_KEY = '1on1_api_url';
 const MEMBERS_KEY = '1on1_members';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyCkdDRoCcYtsdTiPdMPPOIXnpvxswY2Uy_JXzNz5DMzNPPUMav6bo17gvRxJ48-70U/exec';
 
-// 팀 명단 (빌리지베이비 팀 명단 기준: 이름·직무·팀·별명만 사용)
-// 명단이 바뀌면 MEMBERS_VER를 바꿔 주세요. 바뀐 버전으로 처음 접속할 때 팀원 목록이 이 명단으로 다시 설정돼요.
-const MEMBERS_VER_KEY = '1on1_members_ver';
-const MEMBERS_VER = '2026-11-roster-b';
-const DEFAULT_MEMBERS = [
-  {name:'이지현',role:'CX',team:'Biz팀'},
-  {name:'정채영',role:'Finance',team:'Biz팀'},
-  {name:'정혜민',role:'HR',team:'Biz팀'},
-  {name:'박나영',role:'Marketer',team:'브랜드팀',nick:'난요'},
-  {name:'안선우',role:'Designer',team:'브랜드팀'},
-  {name:'이서현',role:'MD',team:'브랜드팀'},
-  {name:'이우리',role:'Marketer',team:'브랜드팀'},
-  {name:'이종민',role:'MD',team:'브랜드팀'},
-  {name:'이혜진',role:'CX',team:'브랜드팀'},
-  {name:'임희진',role:'MD',team:'브랜드팀',nick:'Elin'},
-  {name:'전혜린',role:'Designer',team:'브랜드팀',nick:'Lynn'},
-  {name:'이소현',role:'MD',team:'커머스팀'},
-  {name:'조수민',role:'MD',team:'커머스팀'},
-  {name:'최지민',role:'MD',team:'커머스팀'},
-  {name:'채지민',role:'AMD',team:'커머스팀',nick:'Lydia'},
-  {name:'안연주',role:'Marketer',team:'마에팅팀(GA팀)'},
-  {name:'김영웅',role:'Ad Sales Manager',team:'마에팅팀(GA팀)'},
-  {name:'박고은',role:'Marketer',team:'마에팅팀(GA팀)',nick:'고니'},
-  {name:'박소영',role:'Marketer',team:'마에팅팀(GA팀)',nick:'폴샤'},
-  {name:'이상화',role:'Support',team:'마에팅팀(GA팀)'},
-  {name:'이혜린',role:'Designer',team:'마에팅팀(GA팀)'},
-  {name:'오한나',role:'Editor',team:'마에팅팀(GA팀)',status:'leave'},
-  {name:'홍찬주',role:'Ad Manager',team:'마에팅팀(GA팀)',status:'leave'},
-  {name:'안영주',role:'UX Designer',team:'프로덕트팀'},
-  {name:'문혁은',role:'Engineer',team:'프로덕트팀'},
-  {name:'유진수',role:'Engineer',team:'프로덕트팀'},
-  {name:'정수형',role:'Engineer',team:'프로덕트팀',nick:'Soo'},
-  {name:'최제혁',role:'Engineer',team:'프로덕트팀'},
-  {name:'윤혜준',role:'Staff - QA',team:'프로덕트팀'},
-  {name:'김다은',role:'Engineer',team:'프로덕트팀',status:'leave'},
-  {name:'임소정',role:'Engineer',team:'프로덕트팀',status:'leave'},
-  {name:'이정윤',role:'CEO',team:'Etc'},
-  {name:'정겨운',role:'CSO',team:'Etc'},
-];
-
-// 육아휴직자는 팀원 명단에 status:'leave'로 들어 있어요 (복직하면 팀원 수정에서 '재직'으로 바꾸면 돼요)
-// 퇴사자 (명단에서는 빠졌지만 이전 원온원 기록을 계속 볼 수 있어요) — 이름·직무·마지막 소속 팀
-const FORMER_MEMBERS = [
-  {name:'임희선',role:'Designer',team:'브랜드팀'},
-  {name:'이옥석',role:'CX',team:'브랜드팀'},
-  {name:'김유리',role:'AMD',team:'커머스팀'},
-  {name:'김태윤',role:'MD',team:'커머스팀'},
-  {name:'윤진한',role:'PO',team:'프로덕트팀'},
-];
+// 팀원 명단은 서버(기록 서버의 1on1_members.json)에 저장되고, 로그인한 뒤에만 불러와요. (페이지 소스에는 들어 있지 않아요)
+// 상태: '' 재직 / 'leave' 육아휴직 / 'former' 퇴사(이전 기록 열람용)
+const MEMBERS_VER_KEY = '1on1_members_ver';   // 예전 버전이 브라우저에 저장해 둔 값 (서버로 옮긴 뒤 지우기 위해서만 써요)
+let MEMBER_LIST = [];        // 서버 명단 전체 (재직·육아휴직·퇴사)
+let FORMER_MEMBERS = [];     // 그중 퇴사자
+let membersRev = 0, membersLoaded = false, membersEmptyOnServer = false, recordsLoaded = false;
 function isFormerName(n){return FORMER_MEMBERS.some(m=>m.name===String(n||'').trim());}
 function isLeaveName(n){const m=getMembers().find(x=>x.name===String(n||'').trim());return !!m&&m.status==='leave';}
 // 퇴사자·육아휴직자는 '진행 중' 액션 아이템에서 제외 (기록과 완료된 액션은 그대로 볼 수 있어요)
@@ -477,23 +461,92 @@ let selectedTeam = null;
 let scheduleList = [];       // 일정 수집·확정 페이지에서 확정한 일정 (설문 서버에서 읽어옴)
 let schedLoaded = false;     // false: 불러오는 중 / true: 완료 / 'fail': 실패
 
-/* ── 팀원 목록 (localStorage) ── */
-function getMembers() {
-  const stored = localStorage.getItem(MEMBERS_KEY);
-  let list = null;
-  if (stored) { try { list = JSON.parse(stored); } catch(e) { list = null; } }
-  // 저장된 목록이 없거나 명단 버전이 바뀌었으면 최신 명단으로 설정 (명단에 없는 사람의 기록은 사이드바 '명단 외 기록'에 그대로 남아요)
-  const staleVer = localStorage.getItem(MEMBERS_VER_KEY) !== MEMBERS_VER;
-  const fresh = !list || staleVer;
-  if (fresh) { list = DEFAULT_MEMBERS.map(m => ({...m})); localStorage.setItem(MEMBERS_VER_KEY, MEMBERS_VER); }
-  // 예전 팀 이름으로 저장된 팀원도 새 팀 이름으로 맞춤
-  let changed = false;
-  list = list.map(m => { const t = normTeam(m.team); if (t !== m.team) { changed = true; return {...m, team: t}; } return m; });
-  if (fresh || changed) localStorage.setItem(MEMBERS_KEY, JSON.stringify(list));
-  return list;
+/* ── 팀원 목록 (서버 저장) ── */
+function getMembers() { return MEMBER_LIST.filter(m => m.status !== 'former'); }   // 재직 + 육아휴직
+function applyMembers(list) {
+  MEMBER_LIST = (list || []).map(m => ({...m, team: normTeam(m.team)}));
+  FORMER_MEMBERS = MEMBER_LIST.filter(m => m.status === 'former');
 }
-function saveMembers(list) {
-  localStorage.setItem(MEMBERS_KEY, JSON.stringify(list));
+async function loadMembers() {
+  const res = await api({action:'getMembers'});
+  if (res && Array.isArray(res.members)) {
+    applyMembers(res.members); membersRev = res.rev || 0; membersLoaded = true;
+    membersEmptyOnServer = res.members.length === 0;
+    if (!membersEmptyOnServer) { try { localStorage.removeItem(MEMBERS_KEY); localStorage.removeItem(MEMBERS_VER_KEY); } catch(e) {} }   // 서버에 있으면 브라우저에 남은 예전 명단은 지움
+  } else if (res && res.error === 'Unauthorized') {
+    return;   // 로그인 화면으로 돌아감
+  } else {
+    membersLoaded = true;
+    showToast('⚠️ 팀원 목록을 불러오지 못했어요' + (res && res.error ? ': ' + res.error : ''));
+  }
+  updateMembersBanner(); renderSidebar(); renderMain();
+}
+// 서버에 저장 (다른 곳에서 먼저 바뀌었으면 덮어쓰지 않고 최신 목록을 받아와요)
+async function persistMembers(newAll) {
+  const res = await api({action:'saveMembers', data: JSON.stringify({baseRev: membersRev, members: newAll})});
+  if (res && res.success) { applyMembers(res.members); membersRev = res.rev; membersEmptyOnServer = false; return true; }
+  if (res && res.error === 'Conflict') {
+    applyMembers(res.members); membersRev = res.rev; membersEmptyOnServer = res.members.length === 0;
+    updateMembersBanner(); renderSidebar(); renderMain();
+    showToast('⚠️ 다른 곳에서 팀원 목록이 먼저 바뀌었어요. 최신 목록을 불러왔으니 다시 시도해 주세요.');
+    return false;
+  }
+  if (!(res && res.error === 'Unauthorized')) showToast('❌ 팀원 목록 저장 실패: ' + (res && res.error ? res.error : '다시 시도해 주세요'));
+  return false;
+}
+// 예전 버전이 이 브라우저에 저장해 둔 명단 (서버로 올리기 위해서만 읽어요)
+function localMembersList() {
+  try {
+    const l = JSON.parse(localStorage.getItem(MEMBERS_KEY) || 'null');
+    if (Array.isArray(l)) return l.filter(m => m && m.name && m.role && m.team).map(m => ({...m, team: normTeam(m.team)}));
+  } catch(e) {}
+  return [];
+}
+function updateMembersBanner() {
+  const b = document.getElementById('members-banner');
+  if (!membersLoaded || !membersEmptyOnServer) { b.classList.remove('show'); return; }
+  const n = localMembersList().length;
+  b.querySelector('.mb-text').innerHTML = n
+    ? `<strong>서버에 팀원 목록이 아직 없어요</strong><br>이 브라우저에 저장된 목록(${n}명)을 서버로 올리면 모든 관리자가 같은 목록을 쓸 수 있어요.`
+    : `<strong>서버에 팀원 목록이 아직 없어요</strong><br>예전 목록이 저장된 브라우저에서 먼저 “서버에 올리기”를 해 주세요. 또는 왼쪽 ＋ 버튼으로 직접 추가할 수 있어요.`;
+  b.querySelector('.mb-btn').style.display = n ? 'inline-block' : 'none';
+  b.classList.add('show');
+}
+// 기록은 있는데 올릴 명단에 없는 이름 → 퇴사자로 함께 등록할지 고르게 함 (직무·팀은 마지막 기록에서)
+function importCandidates(local) {
+  const known = new Set(local.map(m => m.name)), by = {};
+  allRecords.forEach(r => { const n = String(r.name || '').trim(); if (!n || known.has(n)) return; (by[n] = by[n] || []).push(r); });
+  return Object.keys(by).sort().map(n => {
+    const rs = by[n].sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+    return {name: n, role: (rs[0].role || '').trim() || '미상', team: normTeam(rs[0].team) || 'Etc', count: rs.length};
+  });
+}
+let importCands = [];
+function openImportModal() {
+  if (!recordsLoaded) { showToast('기록을 불러오는 중이에요. 잠시 후 다시 눌러 주세요'); return; }
+  const local = localMembersList();
+  if (!local.length) { showToast('이 브라우저에 저장된 팀원 목록이 없어요'); return; }
+  importCands = importCandidates(local);
+  const act = local.filter(m => m.status !== 'leave').length, lv = local.filter(m => m.status === 'leave').length;
+  document.getElementById('imp-summary').textContent = `재직 ${act}명${lv ? ' · 육아휴직 ' + lv + '명' : ''}을 서버에 올려요.`;
+  document.getElementById('imp-former').innerHTML = importCands.length
+    ? importCands.map((c, i) => `<label class="imp-row"><input type="checkbox" checked data-i="${i}"><b>${esc(c.name)}</b><span>${esc(c.team)} · ${esc(c.role)} · 기록 ${c.count}건</span></label>`).join('')
+    : '<div style="color:#999;font-size:13px;">해당하는 이름이 없어요</div>';
+  document.getElementById('modal-import').classList.add('open');
+}
+function closeImportModal() { document.getElementById('modal-import').classList.remove('open'); }
+async function doImportMembers() {
+  const local = localMembersList();
+  const former = [...document.querySelectorAll('#imp-former input:checked')].map(i => importCands[+i.dataset.i]).filter(Boolean)
+    .map(c => ({name: c.name, role: c.role, team: c.team, status: 'former'}));
+  const all = [...local.map(m => { const o = {name: m.name, role: m.role, team: m.team}; if (m.nick) o.nick = m.nick; if (m.status === 'leave') o.status = 'leave'; return o; }), ...former];
+  const btn = document.getElementById('imp-btn'); btn.disabled = true; btn.textContent = '올리는 중...';
+  const ok = await persistMembers(all);
+  btn.disabled = false; btn.textContent = '서버에 올리기';
+  if (!ok) return;
+  try { localStorage.removeItem(MEMBERS_KEY); localStorage.removeItem(MEMBERS_VER_KEY); } catch(e) {}
+  closeImportModal(); updateMembersBanner(); renderSidebar(); renderMain();
+  showToast(`✅ 팀원 ${all.length}명을 서버에 올렸어요`);
 }
 
 /* ── 유틸 ── */
@@ -509,6 +562,7 @@ function enterApp(){
   document.getElementById('main-area').style.display='block';
   renderSidebar();
   renderMain();
+  loadMembers();
   loadAllFromSheet();
   loadSlackDirectory();
   loadCheckins();
@@ -745,7 +799,7 @@ function importCheckinAgenda(){
 async function loadAllFromSheet(){
   const data=await api({action:'getAll'});
   if(data&&data.records){
-    allRecords=data.records;
+    allRecords=data.records;recordsLoaded=true;
     renderSidebar();
     renderMain();
   }
@@ -769,7 +823,6 @@ function renderSidebar(){
     const allInTeam=members.filter(m=>m.team===team).length;
     sec.innerHTML=`<div class="team-label link${viewMode==='team'&&selectedTeam===team?' on':''}" onclick="openTeam('${team}')" title="팀 전체 보기">${team}<span style="font-weight:400;">${allInTeam}명 ›</span></div>`;
     filtered.forEach(m=>{
-      const globalIdx=members.findIndex(x=>x.name===m.name&&x.team===m.team);
       const cnt=getMemberRecords(m.name).length;
       const div=document.createElement('div');
       div.className='member-item'+(selectedMember===m.name?' active':'')+(m.status==='leave'?' on-leave':'');
@@ -778,8 +831,8 @@ function renderSidebar(){
         <div class="member-info"><div class="member-name">${m.name}</div><div class="member-role">${m.role}${m.nick?' · '+m.nick:''}${m.status==='leave'?' · 🍼 육아휴직':''}</div></div>
         ${cnt?`<span class="member-count">${cnt}</span>`:''}
         <div class="member-edit-btns">
-          <button class="btn-edit-m" onclick="editMember(event,${globalIdx})" title="수정">✏️</button>
-          <button class="btn-del-m" onclick="deleteMember(event,${globalIdx},'${m.name}')" title="삭제">✕</button>
+          <button class="btn-edit-m" onclick='editMember(event,${JSON.stringify(m.name)})' title="수정">✏️</button>
+          <button class="btn-del-m" onclick='deleteMember(event,${JSON.stringify(m.name)})' title="삭제">✕</button>
         </div>`;
       div.onclick=()=>selectMember(m.name);
       sec.appendChild(div);
@@ -800,7 +853,8 @@ function renderSidebar(){
       div.className='member-item'+(selectedMember===m.name?' active':'');
       div.innerHTML=`<div class="member-avatar" style="background:#aaa">${esc(m.name[0])}</div>
         <div class="member-info"><div class="member-name">${esc(m.name)}</div><div class="member-role">${esc(m.team)} · ${esc(m.role)} · 퇴사</div></div>
-        <span class="member-count">${formerCnt[m.name]}</span>`;
+        <span class="member-count">${formerCnt[m.name]}</span>
+        <div class="member-edit-btns"><button class="btn-edit-m" onclick='editMember(event,${JSON.stringify(m.name)})' title="수정 (재직으로 되돌리기 등)">✏️</button></div>`;
       div.onclick=()=>selectMember(m.name);
       sec.appendChild(div);
     });
@@ -829,79 +883,76 @@ function renderSidebar(){
   }
 }
 
-/* ── 팀원 모달 ── */
-function openMemberModal(idx){
-  document.getElementById('member-modal-title').textContent = idx!==undefined ? '팀원 수정' : '팀원 추가';
-  document.getElementById('edit-member-idx').value = idx!==undefined ? idx : '';
-  if(idx!==undefined){
-    const m=getMembers()[idx];
-    document.getElementById('m-name').value=m.name;
-    document.getElementById('m-role').value=m.role;
-    document.getElementById('m-team').value=m.team;
-    document.getElementById('m-status').value=m.status||'';
-  } else {
-    document.getElementById('m-name').value='';
-    document.getElementById('m-role').value='';
-    document.getElementById('m-team').value='Biz팀';
-    document.getElementById('m-status').value='';
-  }
+/* ── 팀원 모달 (저장은 서버에) ── */
+let savingMember = false;
+function openMemberModal(name){
+  const m = name !== undefined ? MEMBER_LIST.find(x => x.name === name) : null;
+  document.getElementById('member-modal-title').textContent = m ? '팀원 수정' : '팀원 추가';
+  document.getElementById('edit-member-idx').value = m ? m.name : '';   // 수정 중인 팀원의 (원래) 이름
+  document.getElementById('m-name').value = m ? m.name : '';
+  document.getElementById('m-role').value = m ? m.role : '';
+  document.getElementById('m-team').value = m ? m.team : 'Biz팀';
+  document.getElementById('m-status').value = m ? (m.status || '') : '';
   document.getElementById('modal-member').classList.add('open');
 }
 function closeMemberModal(){document.getElementById('modal-member').classList.remove('open');}
 
-function editMember(e, idx){
+function editMember(e, name){
   e.stopPropagation();
-  openMemberModal(idx);
+  openMemberModal(name);
 }
 
-function deleteMember(e, idx, name){
+async function deleteMember(e, name){
   e.stopPropagation();
   const hasCnt = getMemberRecords(name).length;
   const msg = hasCnt
-    ? `${name} 님을 삭제하면 관련 원온원 기록 ${hasCnt}건도 함께 삭제됩니다. 계속하시겠어요?`
+    ? `${name} 님을 팀원 목록에서 삭제할까요?\n기존 원온원 기록 ${hasCnt}건은 지워지지 않고 사이드바 “명단 외 기록”에서 볼 수 있어요.\n퇴사자라면 삭제하지 말고 ✏️ 수정에서 상태를 “퇴사”로 바꿔 주세요.`
     : `${name} 님을 목록에서 삭제할까요?`;
   if(!confirm(msg)) return;
-  const members=getMembers();
-  members.splice(idx,1);
-  saveMembers(members);
+  const ok = await persistMembers(MEMBER_LIST.filter(m => m.name !== name));
+  if(!ok) return;
   if(selectedMember===name){selectedMember=null;}
   renderSidebar();
   renderMain();
   showToast(`🗑️ ${name} 님이 삭제되었습니다`);
 }
 
-function saveMember(){
+async function saveMember(){
+  if(savingMember) return;
   const name=document.getElementById('m-name').value.trim();
   const role=document.getElementById('m-role').value.trim();
   const team=document.getElementById('m-team').value;
   const status=document.getElementById('m-status').value;
+  const oldName=document.getElementById('edit-member-idx').value;
   if(!name){showToast('⚠️ 이름을 입력해 주세요');return;}
   if(!role){showToast('⚠️ 역할/직무를 입력해 주세요');return;}
 
-  const members=getMembers();
-  const idxStr=document.getElementById('edit-member-idx').value;
-
-  if(idxStr!==''){
-    // 수정
-    const idx=parseInt(idxStr);
-    const oldName=members[idx].name;
-    members[idx]={...members[idx],name,role,team,status};
-    // 기록의 이름도 업데이트
-    if(oldName!==name){
-      allRecords=allRecords.map(r=>r.name===oldName?{...r,name,team,role}:r);
+  const all = MEMBER_LIST.map(m => ({...m}));
+  let msg;
+  if(oldName){
+    const i = all.findIndex(m => m.name === oldName);
+    if(i < 0){showToast('⚠️ 팀원을 찾을 수 없어요. 목록을 새로고침해 주세요');return;}
+    if(name !== oldName){
+      if(all.some(m => m.name === name)){showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;}
+      const cnt = getMemberRecords(oldName).length;
+      if(cnt && !confirm(`이름을 바꾸면 기존 기록 ${cnt}건은 이전 이름(${oldName}) 그대로 남아 “명단 외 기록”에 표시돼요. 계속할까요?`)) return;
     }
-    showToast(`✅ ${name} 님 정보가 수정되었습니다`);
-    if(selectedMember===oldName) selectedMember=name;
+    all[i] = {...all[i], name, role, team};
+    if(status) all[i].status = status; else delete all[i].status;
+    msg = `✅ ${name} 님 정보가 수정되었습니다`;
   } else {
-    // 추가 — 중복 체크
-    if(members.find(m=>m.name===name&&m.team===team)){
-      showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;
-    }
-    members.push({name,role,team,status});
-    showToast(`✅ ${name} 님이 추가되었습니다`);
+    if(all.some(m => m.name === name)){showToast('⚠️ 이미 같은 이름의 팀원이 있어요');return;}
+    const nm = {name, role, team}; if(status) nm.status = status;
+    all.push(nm);
+    msg = `✅ ${name} 님이 추가되었습니다`;
   }
 
-  saveMembers(members);
+  savingMember = true;
+  const ok = await persistMembers(all);
+  savingMember = false;
+  if(!ok) return;
+  if(oldName && selectedMember===oldName) selectedMember=name;
+  showToast(msg);
   closeMemberModal();
   renderSidebar();
   renderMain();
@@ -1112,6 +1163,7 @@ function setHeader(title,sub,showAdd){
 }
 function renderMain(){
   updateNav();
+  if(!membersLoaded){setHeader('팀원 목록을 불러오는 중이에요','',false);document.getElementById('records-area').innerHTML='<div class="empty-state"><p>잠시만 기다려 주세요...</p></div>';return;}
   if(viewMode==='search')return renderSearch();
   if(viewMode==='actions')return renderActionsView();
   if(viewMode==='team'&&selectedTeam)return renderTeam(selectedTeam);
