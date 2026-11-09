@@ -94,6 +94,75 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
 .summary-btn:hover{background:#e8f4ff;}
 .hint-blue{font-size:11px;color:#2D7CD2;margin-top:5px;}
 
+/* 1단계: 사이드바 메뉴 · 태그 · 액션 체크 · 검색 · 팀 보기 */
+.side-nav{padding:0.6rem 0.75rem 0;display:flex;flex-direction:column;gap:2px;}
+.side-nav button{display:flex;align-items:center;gap:6px;text-align:left;background:none;border:none;border-radius:9px;padding:8px 10px;font-size:13px;color:#333;cursor:pointer;font-family:inherit;}
+.side-nav button:hover{background:#f5f9ff;}
+.side-nav button.on{background:#eff6ff;color:#1f5fa8;font-weight:700;}
+.side-nav .cnt{margin-left:auto;font-size:11px;background:#fdeaea;color:#c62828;border-radius:100px;padding:1px 8px;font-weight:700;}
+.team-label.link{cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.team-label.link:hover,.team-label.on{color:#2D7CD2;}
+.tag-row{display:flex;flex-wrap:wrap;gap:5px;margin:-4px 0 12px;}
+.tag-chip{font-size:11px;padding:2px 9px;border-radius:100px;background:#e6f4ea;color:#2e7d32;font-weight:600;}
+mark{background:#fff3b0;color:#5c4800;border-radius:3px;padding:0 2px;}
+.who-chip{font-size:12px;font-weight:600;color:#1f5fa8;background:#e8f1fb;border-radius:100px;padding:2px 10px;margin-left:8px;cursor:pointer;}
+.act-list{display:flex;flex-direction:column;gap:2px;}
+.act-item{display:flex;align-items:flex-start;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;line-height:1.6;}
+.act-item input{margin-top:4px;width:16px;height:16px;accent-color:#2D7CD2;flex-shrink:0;cursor:pointer;}
+.act-item .at{flex:1;}
+.act-item .am{font-size:11.5px;color:#999;white-space:nowrap;}
+.act-item.done .at{text-decoration:line-through;color:#aaa;}
+.due.late{color:#c62828;font-weight:600;}
+.due::before{content:" · ";}
+.act-row{display:grid;grid-template-columns:20px 1fr 84px 132px 26px;gap:6px;margin-bottom:6px;align-items:center;}
+.modal .field .act-row input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:#2D7CD2;}
+.modal .field .act-row input[type=text],.modal .field .act-row input[type=date]{padding:8px 10px;font-size:13px;}
+.a-del{border:none;background:none;color:#bbb;font-size:15px;cursor:pointer;}
+.a-del:hover{color:#e24b4a;}
+.tag-pick{display:flex;flex-wrap:wrap;gap:6px;}
+.tag-pick button{border:1px solid #e0e0e0;background:#fff;color:#777;border-radius:100px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit;}
+.tag-pick button.on{background:#2D7CD2;border-color:#2D7CD2;color:#fff;}
+.searchbox{display:flex;gap:8px;align-items:center;background:#fff;border:2px solid #2D7CD2;border-radius:14px;padding:10px 14px;margin-bottom:12px;}
+.searchbox input{flex:1;border:none;outline:none;font-size:15px;font-family:inherit;background:none;}
+.srch-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;}
+.srch-filters select{padding:7px 10px;border:1px solid #dde3eb;border-radius:9px;background:#fff;font-size:12.5px;font-family:inherit;}
+.srch-filters label{font-size:12.5px;display:flex;gap:5px;align-items:center;cursor:pointer;}
+.srch-count{font-size:12.5px;color:#888;margin:10px 0;}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
+.team-card{background:#fff;border-radius:16px;padding:1.1rem 1.3rem;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:transform .12s,box-shadow .12s;}
+.team-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.team-card .tc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.team-card .tc-name{font-size:16px;font-weight:700;}
+.team-card .tc-sub{font-size:12px;color:#999;}
+.tc-mini{display:flex;gap:18px;margin-bottom:12px;}
+.tc-mini div{display:flex;flex-direction:column;}
+.tc-mini b{font-size:18px;}
+.tc-mini span{font-size:11.5px;color:#999;}
+.tc-avs{display:flex;}
+.tc-avs .member-avatar{width:26px;height:26px;font-size:11px;margin-right:-4px;border:2px solid #fff;}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;white-space:nowrap;}
+.pill.ok{background:#e8f5e9;color:#2e7d32;} .pill.warn{background:#fff1d6;color:#9a5b00;} .pill.bad{background:#fdeaea;color:#c62828;} .pill.gray{background:#f0f0f0;color:#888;}
+.sec-title{font-size:14px;font-weight:700;margin:22px 0 10px;}
+.sec-title small{font-weight:400;color:#999;font-size:12px;margin-left:6px;}
+.list-card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:4px 18px;}
+.list-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #f3f3f3;}
+.list-row:last-child{border-bottom:none;}
+.list-row.click{cursor:pointer;}
+.list-row .lr-main{flex:1;min-width:0;}
+.list-row .lr-name{font-weight:600;font-size:14px;}
+.list-row .lr-sub{font-size:12px;color:#999;}
+.tag-chip.link{cursor:pointer;background:#e8f1fb;color:#1f5fa8;}
+.filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+.seg button{border:1px solid #dde3eb;background:#fff;color:#666;border-radius:100px;padding:5px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;}
+.seg button.on{background:#2D7CD2;border-color:#2D7CD2;color:#fff;}
+.act-big{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f3f3f3;font-size:13.5px;}
+.act-big:last-child{border-bottom:none;}
+.act-big input{margin-top:4px;width:16px;height:16px;accent-color:#2D7CD2;flex-shrink:0;cursor:pointer;}
+.act-big .ab-main{flex:1;min-width:0;line-height:1.6;}
+.act-big.done .ab-t{text-decoration:line-through;color:#aaa;}
+.act-big .ab-meta{font-size:12px;color:#999;margin-top:2px;}
+.act-big .ab-meta a{color:#2D7CD2;cursor:pointer;font-weight:600;}
+
 /* 모달 공통 */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;}
 .modal-bg.open{display:flex;}
@@ -134,6 +203,11 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
   <div class="sidebar-header">
     <div class="brand">빌리지베이비</div>
     <h2>원온원 기록</h2>
+  </div>
+  <div class="side-nav" id="side-nav">
+    <button data-v="teams" onclick="setView('teams')">🏢 전체 팀 현황</button>
+    <button data-v="search" onclick="setView('search')">🔍 통합 검색</button>
+    <button data-v="actions" onclick="setView('actions')">✅ 액션 아이템 <span class="cnt" id="act-cnt" style="display:none;"></span></button>
   </div>
   <div class="sidebar-tools">
     <input type="text" id="search-member" placeholder="이름 검색..." oninput="renderSidebar()">
@@ -188,7 +262,19 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
       </select>
     </div>
     <div class="field"><label>주요 체크사항</label><textarea id="f-check" placeholder="이번 원온원에서 확인한 주요 내용을 적어주세요"></textarea></div>
-    <div class="field"><label>액션 아이템</label><textarea id="f-action" placeholder="예: 다음 주까지 OO 리포트 작성, 팀 미팅 일정 조율 등"></textarea></div>
+    <div class="field">
+      <label>액션 아이템 <span style="font-weight:400;color:#aaa;">(담당·기한은 선택, 완료는 체크)</span></label>
+      <div id="f-actions"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="addActionRow()">＋ 액션 추가</button>
+    </div>
+    <div class="field">
+      <label>태그 <span style="font-weight:400;color:#aaa;">(검색·모아보기에 쓰여요)</span></label>
+      <div class="tag-pick" id="f-tags"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <input type="text" id="f-tag-new" placeholder="직접 추가 (예: 승진)" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}">
+        <button type="button" class="btn btn-outline btn-sm" style="flex-shrink:0;" onclick="addCustomTag()">추가</button>
+      </div>
+    </div>
     <div class="field"><label>비고</label><textarea id="f-note" placeholder="기타 메모나 특이사항을 자유롭게 적어주세요" style="min-height:70px;"></textarea></div>
     <div class="field" style="background:#eef5fd;border-radius:12px;padding:12px 14px;">
       <label style="display:flex;align-items:center;gap:8px;margin-bottom:0;cursor:pointer;"><input type="checkbox" id="f-summary" style="width:auto;padding:0;accent-color:#2D7CD2;"> 💬 저장 후 팀원에게 Slack 요약 보내기 <span style="font-weight:400;color:#888;">(미리보기 후 발송)</span></label>
@@ -240,11 +326,11 @@ body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;background:#f0f4f
     <div class="field">
       <label>팀 *</label>
       <select id="m-team">
-        <option value="Biz Team">Biz Team</option>
-        <option value="Brand">Brand</option>
-        <option value="Commerce">Commerce</option>
-        <option value="M&E">M&E</option>
-        <option value="Product">Product</option>
+        <option value="Biz팀">Biz팀</option>
+        <option value="프로덕트팀">프로덕트팀</option>
+        <option value="커머스팀">커머스팀</option>
+        <option value="마에팅팀(GA팀)">마에팅팀(GA팀)</option>
+        <option value="브랜드팀">브랜드팀</option>
         <option value="Etc">Etc</option>
       </select>
     </div>
@@ -264,7 +350,9 @@ let adminKey = '';
 const SURVEY_API_URL_KEY = '1on1_survey_api_url';
 const DEFAULT_SURVEY_API_URL = 'https://script.google.com/macros/s/AKfycbxIdPq2JlcTaC0ljGAXaEt7bolbiSKASRPR2ZtiJ8_25t6-Two36IdbclXnY0fDmHJp/exec';
 // 설문 연락처에 저장할 때 쓰는 팀 이름 (설문 페이지의 팀 이름과 맞춤)
-const SURVEY_TEAM = {'Biz Team':'Biz팀','Product':'프로덕트팀','Commerce':'커머스팀','M&E':'마에팅팀(GA팀)','Brand':'브랜드팀'};
+// 예전 팀 이름 → 설문 페이지와 같은 팀 이름 (저장된 기록은 그대로 두고, 읽을 때 새 이름으로 바꿔서 보여줘요)
+const TEAM_ALIAS = {'Biz Team':'Biz팀','Product':'프로덕트팀','Commerce':'커머스팀','M&E':'마에팅팀(GA팀)','Brand':'브랜드팀'};
+function normTeam(t){return TEAM_ALIAS[t]||t||'';}
 const API_KEY = '1on1_api_url';
 const MEMBERS_KEY = '1on1_members';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbyCkdDRoCcYtsdTiPdMPPOIXnpvxswY2Uy_JXzNz5DMzNPPUMav6bo17gvRxJ48-70U/exec';
@@ -302,19 +390,26 @@ const DEFAULT_MEMBERS = [
   {name:'윤혜준',role:'Staff-QA',team:'Product'},
 ];
 
-const TEAM_ORDER = ['Biz Team','Brand','Commerce','M&E','Product','Etc'];
+const TEAM_ORDER = ['Biz팀','프로덕트팀','커머스팀','마에팅팀(GA팀)','브랜드팀','Etc'];
 const AVATAR_COLORS = ['#2D7CD2','#7f77dd','#e87a5d','#4caf8a','#e6a817','#9c6dd8'];
 
 let selectedMember = null;
 let allRecords = [];
+let viewMode = 'teams';      // teams(전체 팀) / team(팀 상세) / member(팀원) / search(통합 검색) / actions(액션 아이템)
+let selectedTeam = null;
 
 /* ── 팀원 목록 (localStorage) ── */
 function getMembers() {
   const stored = localStorage.getItem(MEMBERS_KEY);
-  if (stored) return JSON.parse(stored);
-  // 최초 진입 시 기본 목록 저장
-  localStorage.setItem(MEMBERS_KEY, JSON.stringify(DEFAULT_MEMBERS));
-  return DEFAULT_MEMBERS;
+  let list = null;
+  if (stored) { try { list = JSON.parse(stored); } catch(e) { list = null; } }
+  const fresh = !list;
+  if (fresh) list = DEFAULT_MEMBERS;
+  // 예전 팀 이름으로 저장된 팀원도 새 팀 이름으로 맞춤
+  let changed = false;
+  list = list.map(m => { const t = normTeam(m.team); if (t !== m.team) { changed = true; return {...m, team: t}; } return m; });
+  if (fresh || changed) localStorage.setItem(MEMBERS_KEY, JSON.stringify(list));
+  return list;
 }
 function saveMembers(list) {
   localStorage.setItem(MEMBERS_KEY, JSON.stringify(list));
@@ -477,7 +572,8 @@ function renderSidebar(){
     if(!filtered.length)return;
     const sec=document.createElement('div');
     sec.className='team-section';
-    sec.innerHTML=`<div class="team-label">${team}</div>`;
+    const allInTeam=members.filter(m=>m.team===team).length;
+    sec.innerHTML=`<div class="team-label link${viewMode==='team'&&selectedTeam===team?' on':''}" onclick="openTeam('${team}')" title="팀 전체 보기">${team}<span style="font-weight:400;">${allInTeam}명 ›</span></div>`;
     filtered.forEach(m=>{
       const globalIdx=members.findIndex(x=>x.name===m.name&&x.team===m.team);
       const cnt=getMemberRecords(m.name).length;
@@ -491,7 +587,7 @@ function renderSidebar(){
           <button class="btn-edit-m" onclick="editMember(event,${globalIdx})" title="수정">✏️</button>
           <button class="btn-del-m" onclick="deleteMember(event,${globalIdx},'${m.name}')" title="삭제">✕</button>
         </div>`;
-      div.onclick=()=>{selectedMember=m.name;renderSidebar();renderMain();};
+      div.onclick=()=>selectMember(m.name);
       sec.appendChild(div);
     });
     list.appendChild(sec);
@@ -510,7 +606,7 @@ function openMemberModal(idx){
   } else {
     document.getElementById('m-name').value='';
     document.getElementById('m-role').value='';
-    document.getElementById('m-team').value='Biz Team';
+    document.getElementById('m-team').value='Biz팀';
   }
   document.getElementById('modal-member').classList.add('open');
 }
@@ -574,7 +670,7 @@ function saveMember(){
 }
 
 /* ── 메인 ── */
-function renderMain(){
+function renderMemberView(){
   const titleEl=document.getElementById('main-title');
   const subEl=document.getElementById('main-sub');
   const addBtn=document.getElementById('add-btn');
@@ -610,18 +706,120 @@ function renderMain(){
   area.innerHTML=`<div class="records-wrap">${records.map(r=>cardHTML(r)).join('')}</div>`;
 }
 
-function cardHTML(r){
+/* ═══════════ 1단계: 팀 묶음 · 통합 검색 · 태그 · 액션 체크 ═══════════ */
+const PRESET_TAGS = ['커리어','보상','컨디션','협업','업무량','피드백','온보딩','이슈'];
+const SRCH = {q:'',team:'',method:'',period:'',tags:[],openOnly:false};
+const ACTV = {status:'open',team:''};
+let curTags = [];
+
+function escAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+// 검색어 강조: 조각마다 이스케이프해서 태그가 깨지지 않게 함
+function hl(text,toks){
+  const raw=String(text==null?'':text);
+  if(!toks||!toks.length)return esc(raw);
+  const re=new RegExp('('+toks.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')','gi');
+  return raw.split(re).map((p,i)=>i%2?'<mark>'+esc(p)+'</mark>':esc(p)).join('');
+}
+
+/* ── 화면 전환 ── */
+function setView(v){viewMode=v;selectedMember=null;selectedTeam=null;renderSidebar();renderMain();window.scrollTo(0,0);}
+function openTeam(t){viewMode='team';selectedTeam=t;selectedMember=null;renderSidebar();renderMain();window.scrollTo(0,0);}
+function selectMember(n){viewMode='member';selectedMember=n;selectedTeam=null;renderSidebar();renderMain();window.scrollTo(0,0);}
+function goSearch(tag,team){SRCH.q='';SRCH.tags=tag?[tag]:[];SRCH.team=team||'';SRCH.method='';SRCH.period='';SRCH.openOnly=false;setView('search');}
+
+function memberTeam(n){const m=getMembers().find(x=>x.name===n);return m?m.team:'';}
+function recTeam(r){return memberTeam(r.name)||normTeam(r.team);}
+function daysSince(dt){const d=new Date(dt);return isNaN(d)?null:Math.floor((Date.now()-d.getTime())/86400000);}
+function fmtMD(s){const d=new Date(String(s).length<=10?s+'T00:00':s);return isNaN(d)?'':(d.getMonth()+1)+'/'+d.getDate();}
+function ymd(dt){const d=new Date(dt);return isNaN(d)?'—':d.toLocaleDateString('ko-KR');}
+
+/* ── 액션 아이템 (체크리스트) ── */
+// 예전 기록은 액션 아이템이 글 한 덩어리라서, 줄마다 한 항목으로 나눠서 보여줘요
+function getActions(r){
+  if(Array.isArray(r.actions))return r.actions;
+  return String(r.action||'').split('\n')
+    .map(s=>s.replace(/^\s*(?:[-•▪·*]|\d+[.)])\s*/,'').trim())
+    .filter(Boolean)
+    .map(t=>({t,done:false,owner:'',due:''}));
+}
+function dueInfo(a){
+  if(!a.due)return '';
+  const d=new Date(a.due+'T00:00');if(isNaN(d))return '';
+  const t=new Date();t.setHours(0,0,0,0);
+  const n=Math.round((d-t)/86400000), late=!a.done&&n<0;
+  return `<span class="due${late?' late':''}">${fmtMD(a.due)}${a.done?'':late?' · '+(-n)+'일 지남':n===0?' · 오늘':''}</span>`;
+}
+function actionsHTML(r,toks){
+  const acts=getActions(r);
+  if(!acts.length)return '<span style="color:#ccc">—</span>';
+  return acts.map((a,i)=>`<label class="act-item${a.done?' done':''}"><input type="checkbox" ${a.done?'checked':''} onchange='toggleAction(${JSON.stringify(String(r.id))},${i})'><span class="at">${hl(a.t,toks)}</span><span class="am">${a.owner?esc(a.owner):''}${dueInfo(a)}</span></label>`).join('');
+}
+// 체크하면 바로 저장 (실패하면 되돌림)
+async function toggleAction(id,i){
+  const r=allRecords.find(x=>String(x.id)===String(id));
+  if(!r)return;
+  const acts=getActions(r).map(a=>({...a}));
+  if(!acts[i])return;
+  acts[i].done=!acts[i].done;
+  const updated={...r,actions:acts,action:acts.map(a=>a.t).join('\n')};
+  const prev=allRecords;
+  allRecords=allRecords.map(x=>String(x.id)===String(id)?updated:x);
+  rerender();
+  const res=await api({action:'save',record:JSON.stringify(updated)});
+  if(!(res&&res.success)){allRecords=prev;rerender();showToast('❌ 저장 실패. 다시 시도해 주세요.');}
+}
+// 검색 화면은 입력칸을 다시 그리지 않고 결과만 갱신
+function rerender(){
+  if(viewMode==='search'){updateNav();doSearch();}
+  else renderMain();
+}
+
+/* ── 기록 작성 팝업: 액션 행 · 태그 ── */
+function addActionRow(a){
+  const d=document.createElement('div');
+  d.className='act-row';
+  d.innerHTML=`<input type="checkbox" class="a-done" title="완료" ${a&&a.done?'checked':''}><input type="text" class="a-t" placeholder="할 일" value="${escAttr(a&&a.t)}"><input type="text" class="a-owner" placeholder="담당" value="${escAttr(a&&a.owner)}"><input type="date" class="a-due" title="기한" value="${escAttr(a&&a.due)}"><button type="button" class="a-del" title="삭제" onclick="this.parentNode.remove()">✕</button>`;
+  document.getElementById('f-actions').appendChild(d);
+}
+function readActionRows(){
+  return [...document.querySelectorAll('#f-actions .act-row')].map(row=>({
+    t:row.querySelector('.a-t').value.trim(),
+    done:row.querySelector('.a-done').checked,
+    owner:row.querySelector('.a-owner').value.trim(),
+    due:row.querySelector('.a-due').value
+  })).filter(a=>a.t);
+}
+function renderTagPick(){
+  const all=[...PRESET_TAGS,...curTags.filter(t=>!PRESET_TAGS.includes(t))];
+  document.getElementById('f-tags').innerHTML=all.map(t=>`<button type="button" class="${curTags.includes(t)?'on':''}" data-t="${escAttr(t)}" onclick="toggleCurTag(this.dataset.t)">#${esc(t)}</button>`).join('');
+}
+function toggleCurTag(t){curTags=curTags.includes(t)?curTags.filter(x=>x!==t):[...curTags,t];renderTagPick();}
+function addCustomTag(){
+  const el=document.getElementById('f-tag-new');
+  const t=el.value.trim().replace(/^#/,'');
+  if(!t)return;
+  if(!curTags.includes(t))curTags.push(t);
+  el.value='';renderTagPick();
+}
+
+/* ── 기록 카드 ── */
+// opt.showName: 팀·검색 화면에서 누구의 기록인지 표시 / opt.toks: 검색어 강조
+function cardHTML(r,opt){
+  opt=opt||{};const toks=opt.toks||null;
   const dt=r.datetime?new Date(r.datetime).toLocaleString('ko-KR',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
   const mc=r.method==='대면'?'m-face':'m-gather';
+  const tags=(r.tags||[]).map(t=>`<span class="tag-chip">#${hl(t,toks)}</span>`).join('');
+  const who=opt.showName?`<span class="who-chip" onclick='selectMember(${JSON.stringify(r.name)})' title="${escAttr(r.name)} 님 기록으로 이동">${hl(r.name,toks)} · ${esc(recTeam(r))}</span>`:'';
   return `<div class="record-card">
     <div class="record-card-header">
-      <span class="record-date">📅 ${dt}</span>
+      <span class="record-date">📅 ${dt}${who}</span>
       <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${r.summarySentAt?`<span class="sent-chip" title="팀원에게 Slack 요약 발송">💬 요약 발송 · ${esc(r.summarySentAt)}</span>`:''}<span class="record-method ${mc}">${r.method||'—'}</span></span>
     </div>
+    ${tags?`<div class="tag-row">${tags}</div>`:''}
     <div class="record-body">
-      <div class="record-field full"><label>✅ 주요 체크사항</label><p>${r.check?esc(r.check):'<span style="color:#ccc">—</span>'}</p></div>
-      <div class="record-field full"><label>🎯 액션 아이템</label><p>${r.action?esc(r.action):'<span style="color:#ccc">—</span>'}</p></div>
-      <div class="record-field full"><label>📌 비고</label><p>${r.note?esc(r.note):'<span style="color:#ccc">—</span>'}</p></div>
+      <div class="record-field full"><label>✅ 주요 체크사항</label><p>${r.check?hl(r.check,toks):'<span style="color:#ccc">—</span>'}</p></div>
+      <div class="record-field full"><label>🎯 액션 아이템</label><div class="act-list">${actionsHTML(r,toks)}</div></div>
+      <div class="record-field full"><label>📌 비고</label><p>${r.note?hl(r.note,toks):'<span style="color:#ccc">—</span>'}</p></div>
     </div>
     <div class="record-actions">
       <button class="summary-btn" onclick='openSummary(${JSON.stringify(r.id)})'>${r.summarySentAt?'💬 요약 재발송':'💬 Slack 요약'}</button>
@@ -629,6 +827,153 @@ function cardHTML(r){
       <button class="del-btn" onclick='deleteRecord(${JSON.stringify(r.id)})'>삭제</button>
     </div>
   </div>`;
+}
+
+/* ── 메인 화면 분배 ── */
+function updateNav(){
+  document.querySelectorAll('#side-nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===viewMode));
+  let n=0;allRecords.forEach(r=>{n+=getActions(r).filter(a=>!a.done).length;});
+  const c=document.getElementById('act-cnt');
+  if(c){c.textContent=n||'';c.style.display=n?'':'none';}
+}
+function setHeader(title,sub,showAdd){
+  document.getElementById('main-title').textContent=title;
+  document.getElementById('main-sub').textContent=sub;
+  document.getElementById('add-btn').style.display=showAdd?'inline-block':'none';
+  document.getElementById('stat-row').style.display='none';
+}
+function renderMain(){
+  updateNav();
+  if(viewMode==='search')return renderSearch();
+  if(viewMode==='actions')return renderActionsView();
+  if(viewMode==='team'&&selectedTeam)return renderTeam(selectedTeam);
+  if(viewMode==='member'&&selectedMember)return renderMemberView();
+  return renderTeams();
+}
+
+/* ── 팀 보기 ── */
+function teamStats(team){
+  const ms=getMembers().filter(m=>m.team===team);
+  const rows=ms.map(m=>{
+    const rs=getMemberRecords(m.name).slice().sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+    const open=rs.reduce((n,r)=>n+getActions(r).filter(a=>!a.done).length,0);
+    return {m,rs,last:rs[0],days:rs[0]?daysSince(rs[0].datetime):null,open};
+  });
+  return {team,ms,rows,
+    total:rows.reduce((n,x)=>n+x.rs.length,0),
+    open:rows.reduce((n,x)=>n+x.open,0),
+    need:rows.filter(x=>x.days===null||x.days>=30).length};
+}
+function gapPill(x){
+  if(x.days===null)return '<span class="pill gray">기록 없음</span>';
+  return `<span class="pill ${x.days>=30?'bad':x.days>=21?'warn':'ok'}">${x.days}일 전</span>`;
+}
+function statCards(items){
+  const el=document.getElementById('stat-row');
+  el.style.display='grid';
+  el.innerHTML=items.map(([n,l,c])=>`<div class="stat-card"><div class="stat-num" style="${c?'color:'+c:''}">${n}</div><div class="stat-label">${l}</div></div>`).join('');
+}
+
+function renderTeams(){
+  setHeader('전체 팀 현황','팀 카드를 누르면 팀 단위로 기록을 확인할 수 있어요',false);
+  const all=TEAM_ORDER.map(teamStats).filter(s=>s.ms.length);
+  statCards([
+    [all.reduce((n,s)=>n+s.ms.length,0),'전체 팀원'],
+    [all.reduce((n,s)=>n+s.total,0),'누적 원온원 기록'],
+    [all.reduce((n,s)=>n+s.open,0),'미완료 액션 아이템','#e6a817'],
+    [all.reduce((n,s)=>n+s.need,0),'30일 이상 원온원 없음(기록 없음 포함)','#c62828']
+  ]);
+  document.getElementById('records-area').innerHTML=`<div class="team-grid">${all.map(s=>`
+    <div class="team-card" onclick="openTeam('${s.team}')">
+      <div class="tc-head"><div><div class="tc-name">${esc(s.team)}</div><div class="tc-sub">${s.ms.length}명 · 누적 ${s.total}회</div></div>
+        <span class="pill ${s.need?'bad':'ok'}">${s.need?'원온원 필요 '+s.need+'명':'간격 양호'}</span></div>
+      <div class="tc-mini"><div><b>${s.total}</b><span>누적 기록</span></div><div><b style="color:#e6a817">${s.open}</b><span>미완료 액션</span></div></div>
+      <div class="tc-avs">${s.ms.slice(0,10).map(m=>`<div class="member-avatar" style="background:${avatarColor(m.name)}" title="${escAttr(m.name)}">${esc(m.name[0])}</div>`).join('')}${s.ms.length>10?`<span style="font-size:11px;color:#999;margin-left:10px;align-self:center;">+${s.ms.length-10}</span>`:''}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderTeam(team){
+  const s=teamStats(team);
+  setHeader(team,`${s.ms.length}명 · 누적 원온원 ${s.total}회`,false);
+  statCards([[s.ms.length,'팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,'30일 이상 원온원 없음(기록 없음 포함)','#c62828']]);
+  const tagCnt={};
+  s.rows.forEach(x=>x.rs.forEach(r=>(r.tags||[]).forEach(t=>tagCnt[t]=(tagCnt[t]||0)+1)));
+  const tags=Object.entries(tagCnt).sort((a,b)=>b[1]-a[1]);
+  const recs=s.rows.flatMap(x=>x.rs).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+  document.getElementById('records-area').innerHTML=`
+    <div class="sec-title" style="margin-top:4px">👤 팀원 <small>이름을 누르면 개인 기록으로 이동해요</small></div>
+    <div class="list-card">${s.rows.map(x=>`
+      <div class="list-row click" onclick='selectMember(${JSON.stringify(x.m.name)})'>
+        <div class="member-avatar" style="background:${avatarColor(x.m.name)}">${esc(x.m.name[0])}</div>
+        <div class="lr-main"><div class="lr-name">${esc(x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(x.m.role)}</span></div>
+          <div class="lr-sub">${x.last?'마지막 '+ymd(x.last.datetime)+' · 총 '+x.rs.length+'회':'아직 기록이 없어요'}</div></div>
+        ${x.open?`<span class="pill warn">액션 ${x.open}</span>`:''}${gapPill(x)}
+      </div>`).join('')||'<div class="empty-state"><p>이 팀에 등록된 팀원이 없어요</p></div>'}</div>
+    <div class="sec-title">🏷️ 팀에서 자주 나온 주제 <small>누르면 이 팀의 기록 중에서 검색해요</small></div>
+    <div class="list-card" style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:6px;">${tags.map(([t,c])=>`<span class="tag-chip link" onclick='goSearch(${JSON.stringify(t)},${JSON.stringify(team)})'>#${esc(t)} ${c}</span>`).join('')||'<span style="color:#bbb;font-size:13px;">아직 태그가 없어요. 기록을 작성할 때 태그를 달아보세요.</span>'}</div>
+    <div class="sec-title">🕘 팀 타임라인 <small>팀원 전체 기록을 최신순으로</small></div>
+    ${recs.length?`<div class="records-wrap">${recs.map(r=>cardHTML(r,{showName:true})).join('')}</div>`:'<div class="empty-state"><div class="icon">📝</div><p>아직 기록이 없어요</p></div>'}`;
+}
+
+/* ── 통합 검색 ── */
+function toggleSrchTag(t){SRCH.tags=SRCH.tags.includes(t)?SRCH.tags.filter(x=>x!==t):[...SRCH.tags,t];renderSearch();}
+function renderSearch(){
+  setHeader('통합 검색','전체 팀원의 기록 내용까지 한 번에 찾아요 · 예: 업무량, 교육, 커리어',false);
+  const teams=TEAM_ORDER.filter(t=>getMembers().some(m=>m.team===t));
+  const tagsAll=[...new Set([...PRESET_TAGS,...allRecords.flatMap(r=>r.tags||[])])];
+  document.getElementById('records-area').innerHTML=`
+    <div class="searchbox">🔍<input id="srch-q" type="text" value="${escAttr(SRCH.q)}" placeholder="이름, 체크사항, 액션 아이템, 비고, 태그에서 검색" oninput="SRCH.q=this.value;doSearch()" autocomplete="off"></div>
+    <div class="srch-filters">
+      <select onchange="SRCH.team=this.value;doSearch()"><option value="">전체 팀</option>${teams.map(t=>`<option ${SRCH.team===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <select onchange="SRCH.method=this.value;doSearch()"><option value="">전체 방식</option><option ${SRCH.method==='대면'?'selected':''}>대면</option><option ${SRCH.method==='비대면(게더)'?'selected':''}>비대면(게더)</option></select>
+      <select onchange="SRCH.period=this.value;doSearch()"><option value="">전체 기간</option><option value="30" ${SRCH.period==='30'?'selected':''}>최근 30일</option><option value="90" ${SRCH.period==='90'?'selected':''}>최근 90일</option></select>
+      <label><input type="checkbox" ${SRCH.openOnly?'checked':''} onchange="SRCH.openOnly=this.checked;doSearch()" style="accent-color:#2D7CD2"> 미완료 액션이 있는 기록만</label>
+    </div>
+    <div class="tag-pick" style="margin-bottom:6px;">${tagsAll.map(t=>`<button type="button" class="${SRCH.tags.includes(t)?'on':''}" data-t="${escAttr(t)}" onclick="toggleSrchTag(this.dataset.t)">#${esc(t)}</button>`).join('')}</div>
+    <div id="srch-results"></div>`;
+  doSearch();
+}
+function doSearch(){
+  const box=document.getElementById('srch-results');
+  if(!box)return;
+  const toks=SRCH.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const list=allRecords.filter(r=>{
+    if(SRCH.team&&recTeam(r)!==SRCH.team)return false;
+    if(SRCH.method&&r.method!==SRCH.method)return false;
+    if(SRCH.period){const d=daysSince(r.datetime);if(d===null||d>+SRCH.period)return false;}
+    if(SRCH.tags.length&&!SRCH.tags.every(t=>(r.tags||[]).includes(t)))return false;
+    if(SRCH.openOnly&&!getActions(r).some(a=>!a.done))return false;
+    if(!toks.length)return true;
+    const hay=[r.name,recTeam(r),r.role,r.check,r.note,r.action,...getActions(r).map(a=>a.t+' '+(a.owner||'')),...(r.tags||[]).map(t=>'#'+t+' '+t)].join(' ').toLowerCase();
+    return toks.every(t=>hay.includes(t));
+  }).sort((a,b)=>new Date(b.datetime)-new Date(a.datetime));
+  const LIMIT=100;
+  box.innerHTML=`<div class="srch-count">${list.length}건${list.length>LIMIT?' · 최근 '+LIMIT+'건만 표시해요. 검색어나 필터를 더해 보세요':''}</div>`
+    +(list.length?`<div class="records-wrap">${list.slice(0,LIMIT).map(r=>cardHTML(r,{showName:true,toks})).join('')}</div>`:'<div class="empty-state"><div class="icon">🔍</div><p>검색 결과가 없어요</p></div>');
+}
+
+/* ── 액션 아이템 모아보기 ── */
+function setActStatus(v){ACTV.status=v;renderActionsView();}
+function renderActionsView(){
+  setHeader('액션 아이템','원온원에서 정한 할 일을 모아서 챙겨요 · 체크하면 완료로 저장돼요',false);
+  const items=[];
+  allRecords.forEach(r=>getActions(r).forEach((a,i)=>items.push({r,a,i})));
+  let list=items.filter(x=>ACTV.status==='all'||(ACTV.status==='open'?!x.a.done:x.a.done));
+  if(ACTV.team)list=list.filter(x=>recTeam(x.r)===ACTV.team);
+  const dueKey=x=>x.a.due?new Date(x.a.due+'T00:00').getTime():Infinity;
+  list.sort((a,b)=>dueKey(a)-dueKey(b)||new Date(b.r.datetime)-new Date(a.r.datetime));
+  const teams=TEAM_ORDER.filter(t=>getMembers().some(m=>m.team===t));
+  const openN=items.filter(x=>!x.a.done).length;
+  document.getElementById('records-area').innerHTML=`
+    <div class="filter-row">
+      <div class="seg">${[['open','진행 중 '+openN],['done','완료'],['all','전체']].map(([k,l])=>`<button type="button" class="${ACTV.status===k?'on':''}" onclick="setActStatus('${k}')">${l}</button>`).join('')}</div>
+      <select class="srch-filters" style="padding:7px 10px;border:1px solid #dde3eb;border-radius:9px;background:#fff;font-size:12.5px;font-family:inherit;" onchange="ACTV.team=this.value;renderActionsView()"><option value="">전체 팀</option>${teams.map(t=>`<option ${ACTV.team===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+    </div>
+    <div class="list-card">${list.length?list.map(x=>`
+      <label class="act-big${x.a.done?' done':''}"><input type="checkbox" ${x.a.done?'checked':''} onchange='toggleAction(${JSON.stringify(String(x.r.id))},${x.i})'>
+        <div class="ab-main"><div class="ab-t">${esc(x.a.t)}</div>
+          <div class="ab-meta"><a data-name="${escAttr(x.r.name)}" onclick="event.preventDefault();selectMember(this.dataset.name)">${esc(x.r.name)}</a> · ${esc(recTeam(x.r))}${x.a.owner?' · 담당 '+esc(x.a.owner):''}${dueInfo(x.a)} · 기록 ${ymd(x.r.datetime)}</div></div>
+      </label>`).join(''):'<div class="empty-state" style="padding:2.5rem 1rem"><div class="icon">🎉</div><p>해당하는 액션 아이템이 없어요</p></div>'}</div>`;
 }
 
 /* ── 기록 모달 ── */
@@ -641,14 +986,21 @@ function openRecordModal(id){
       document.getElementById('f-datetime').value=r.datetime||'';
       document.getElementById('f-method').value=r.method||'대면';
       document.getElementById('f-check').value=r.check||'';
-      document.getElementById('f-action').value=r.action||'';
       document.getElementById('f-note').value=r.note||'';
     }
   } else {
-    ['f-check','f-action','f-note'].forEach(id=>document.getElementById(id).value='');
+    ['f-check','f-note'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-datetime').value='';
     document.getElementById('f-method').value='대면';
   }
+  // 액션 아이템(체크리스트)·태그 채우기
+  const cur=id?allRecords.find(x=>String(x.id)===String(id)):null;
+  document.getElementById('f-actions').innerHTML='';
+  const acts=cur?getActions(cur):[];
+  if(acts.length)acts.forEach(a=>addActionRow(a));else addActionRow();
+  curTags=cur&&Array.isArray(cur.tags)?[...cur.tags]:[];
+  renderTagPick();
+  document.getElementById('f-tag-new').value='';
   document.getElementById('f-summary').checked=!id;   // 새 기록은 기본 체크 (발송 전 미리보기가 먼저 열려요)
   document.getElementById('modal-record').classList.add('open');
 }
@@ -665,6 +1017,7 @@ async function saveRecord(){
   const wantSummary=document.getElementById('f-summary').checked;
   // 수정할 때 기존 기록의 다른 항목(요약 발송 이력 등)을 잃지 않도록 이어받음
   const prevRec=editId?allRecords.find(x=>String(x.id)===String(editId)):null;
+  const actionsList=readActionRows();
   const record={
     ...(prevRec||{}),
     id:editId||'',
@@ -672,7 +1025,9 @@ async function saveRecord(){
     datetime:dt,
     method:document.getElementById('f-method').value,
     check:document.getElementById('f-check').value.trim(),
-    action:document.getElementById('f-action').value.trim(),
+    action:actionsList.map(a=>a.t).join('\n'),   // 예전 화면·Slack 요약과 호환되도록 글로도 함께 저장
+    actions:actionsList,
+    tags:[...curTags],
     note:document.getElementById('f-note').value.trim(),
     updatedAt:new Date().toLocaleString('ko-KR')
   };
@@ -764,7 +1119,7 @@ async function sendSummary(){
 }
 async function saveContactSlack(r,slackId){
   const name=String(r.name).trim(), prev=slackContacts[name]||{};
-  const rec={id:'ct_'+name,type:'contact',name,team:prev.team||SURVEY_TEAM[r.team]||'',email:prev.email||'',slackUserId:slackId,updatedAt:new Date().toLocaleString('ko-KR')};
+  const rec={id:'ct_'+name,type:'contact',name,team:prev.team||(normTeam(r.team)==='Etc'?'':normTeam(r.team)),email:prev.email||'',slackUserId:slackId,updatedAt:new Date().toLocaleString('ko-KR')};
   const res=await surveyApi({action:'saveSurvey',survey:JSON.stringify(rec)});
   if(res&&res.success){slackDir[name]=slackId;slackContacts[name]=rec;}
 }
@@ -772,9 +1127,9 @@ async function saveContactSlack(r,slackId){
 /* ── CSV ── */
 function exportCSV(){
   if(!allRecords.length){showToast('⚠️ 내보낼 기록이 없습니다');return;}
-  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각','요약발송']];
+  const rows=[['이름','팀','Role','원온원 일시','방식','주요 체크사항','액션 아이템','비고','작성시각','요약발송','태그','액션 완료']];
   allRecords.forEach(r=>{
-    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt,r.summarySentAt]
+    rows.push([r.name,r.team,r.role,r.datetime,r.method,r.check,r.action,r.note,r.updatedAt,r.summarySentAt,(r.tags||[]).join(' / '),(function(){const a=getActions(r);return a.length?a.filter(x=>x.done).length+'/'+a.length:'';})()]
       .map(v=>`"${String(v||'').replace(/"/g,'""')}"`));
   });
   const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
