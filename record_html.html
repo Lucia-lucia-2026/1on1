@@ -640,11 +640,11 @@ async function loadSlackDirectory(){
 }
 
 // ── 팀원 셀프 체크인 (설문 서버에서 읽어옴) ──
-let checkins=[], boxSid=null, curCheckinSid='', pendingSid=null, ciOpenSid=null;
+let reminders=[], checkins=[], boxSid=null, curCheckinSid='', pendingSid=null, ciOpenSid=null;
 const CI_MOODS=['힘들어요','조금 지쳐요','보통','괜찮아요','좋아요'];
 async function loadCheckins(){
   const res=await surveyApi({action:'listCheckins'});
-  if(res&&Array.isArray(res.checkins)){checkins=res.checkins;if(viewMode==='dash'||viewMode==='member')renderMain();}
+  if(res&&Array.isArray(res.checkins)){checkins=res.checkins;reminders=Array.isArray(res.reminders)?res.reminders:[];if(viewMode==='dash'||viewMode==='member')renderMain();}
 }
 function ciOf(sid){return checkins.find(c=>String(c.sid)===String(sid));}
 function ciSeenMap(){try{return JSON.parse(localStorage.getItem('1on1_ci_seen')||'{}');}catch(e){return {};}}
@@ -661,7 +661,10 @@ function ciChipHTML(c,sched){
     const edited=c.editCount>0;
     return `<span class="ci-chip${edited?' edited':''}" onclick='openCheckin(${JSON.stringify(String(c.sid))})' title="눌러서 체크인 내용 보기">📝 체크인 완료 · ${MOOD_ICONS[c.mood-1]||''} · 안건 ${(c.agenda||[]).length}${edited?' · ✏️ 수정 '+c.editCount+'회':''}${ciIsNew(c)?'<b class="ci-new">NEW</b>':''}</span>`;
   }
-  if(sched&&sched.checkinState==='ok')return '<span class="ci-chip wait">📝 체크인 대기</span>';
+  if(sched&&sched.checkinState==='ok'){
+    const rem=reminders.find(r=>String(r.sid)===String(sched.id)&&r.ok);
+    return '<span class="ci-chip wait">📝 체크인 대기'+(rem?' · ⏰ 리마인드 발송 '+ciStampText(rem.at):'')+'</span>';
+  }
   return '';
 }
 // 체크인 내용 (수정했다면 바뀐 부분 강조)
