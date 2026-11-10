@@ -1132,19 +1132,35 @@ function actionsHTML(r,toks){
   if(!acts.length)return '<span style="color:#ccc">—</span>';
   return acts.map((a,i)=>`<label class="act-item${a.done?' done':''}"><input type="checkbox" ${a.done?'checked':''} onchange='toggleAction(${JSON.stringify(String(r.id))},${i})'><span class="at">${hl(a.t,toks)}</span><span class="am">${a.owner?esc(a.owner):''}${dueInfo(a)}</span></label>`).join('');
 }
-// 체크하면 바로 저장 (실패하면 되돌림)
-async function toggleAction(id,i){
+// 체크하면 바로 저장해요. 화면은 먼저 바꾸고, 서버 저장은 한 번에 하나씩 차례로 보내요(빠르게 여러 개를 체크해도 서로 부딪치지 않게).
+let _actSaveQ=Promise.resolve();
+function toggleAction(id,i){
   const r=allRecords.find(x=>String(x.id)===String(id));
   if(!r)return;
   const acts=getActions(r).map(a=>({...a}));
   if(!acts[i])return;
   acts[i].done=!acts[i].done;
   const updated={...r,actions:acts,action:acts.map(a=>a.t).join('\n')};
-  const prev=allRecords;
   allRecords=allRecords.map(x=>String(x.id)===String(id)?updated:x);
   rerender();
-  const res=await api({action:'save',record:JSON.stringify(updated)});
-  if(!(res&&res.success)){allRecords=prev;rerender();showToast('❌ 저장 실패. 다시 시도해 주세요.');}
+  _actSaveQ=_actSaveQ.then(()=>saveActionState(id)).catch(()=>{});
+}
+// 그 기록의 가장 최근 상태를 서버에 저장. 실패하면 서버에 실제로 저장됐는지 확인하고, 아니면 서버 내용으로 되돌려요.
+async function saveActionState(id){
+  const cur=allRecords.find(x=>String(x.id)===String(id));
+  if(!cur)return;
+  const want=JSON.stringify(getActions(cur));
+  const res=await api({action:'save',record:JSON.stringify(cur)});
+  if(res&&res.success)return;
+  if(res&&res.error==='Unauthorized')return;           // 로그인 화면으로 안내됨
+  // 응답이 늦거나 끊겼어도 서버에는 저장됐을 수 있어요 → 서버 내용 확인
+  const chk=await api({action:'getAll'},{silent:true});
+  const srv=chk&&Array.isArray(chk.records)?chk.records.find(x=>String(x.id)===String(id)):null;
+  if(srv&&JSON.stringify(getActions(srv))===want)return;   // 실제로는 저장됨
+  let why=res&&res.error?res.error:(res===null?'서버에서 응답을 받지 못했어요':'알 수 없는 오류');
+  if(!chk)why+=' (새로고침해서 저장됐는지 확인해 주세요)';
+  if(chk&&Array.isArray(chk.records)){allRecords=chk.records;rerender();}   // 서버 기준으로 되돌림
+  showToast('❌ 저장 실패: '+why+' · 다시 시도해 주세요.');
 }
 // 검색 화면은 입력칸을 다시 그리지 않고 결과만 갱신
 function rerender(){
