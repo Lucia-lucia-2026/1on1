@@ -449,7 +449,6 @@ function isInactiveName(n){return isFormerName(n)||isLeaveName(n);}
 const TEAM_ORDER = ['Biz팀','프로덕트팀','커머스팀','마에팅팀(GA팀)','브랜드팀','Etc'];
 // 원온원 간격 기준: 3개월(90일) 이상 없으면 '원온원 필요', 2개월(60일) 이상이면 주의
 const NEED_DAYS = 90, WARN_DAYS = 60;
-const NEED_LABEL = '3개월 이상 원온원 없음(기록 없음 포함)';
 // 컨디션(관리자 관찰)·템플릿
 const MOOD_ICONS = ['😟','😕','😐','🙂','😄'];
 const MOOD_LABELS = ['힘들어 보여요','조금 지쳐 보여요','보통','괜찮아 보여요','좋아 보여요'];
@@ -1264,7 +1263,6 @@ function renderDash(){
     return {m,rs,last:rs[0],days:rs[0]?daysSince(rs[0].datetime):null,thisMonth};
   });
   const doneN=rows.filter(x=>x.thisMonth).length;
-  const needN=rows.filter(x=>x.days===null||x.days>=NEED_DAYS).length;
   const openActs=[];
   allRecords.forEach(r=>{if(isInactiveName(r.name))return;getActions(r).forEach((a,i)=>{if(!a.done)openActs.push({r,a,i});});});
   // 예정된 원온원 + 기록이 아직 없는 지난 일정(최근 14일)
@@ -1278,7 +1276,6 @@ function renderDash(){
   const lowMood=latestMoods.filter(o=>Number(o.r.mood)<=2);
   statCards([
     [doneN+'/'+active.length,'이번 달 원온원 진행'],
-    [needN,NEED_LABEL,'#c62828'],
     [openActs.length,'미완료 액션 아이템','#e6a817'],
     [schedLoaded===true?upcomingN:'—','예정된 원온원','#2D7CD2'],
     [avgMood||'—','최근 평균 컨디션 (5점)']
@@ -1369,8 +1366,7 @@ function renderTeams(){
     [all.reduce((n,s)=>n+s.ms.length,0),'재직 팀원'],
     ...(all.some(s=>s.lRows.length)?[[all.reduce((n,s)=>n+s.lRows.length,0),'육아휴직']]:[]),
     [all.reduce((n,s)=>n+s.total,0),'누적 원온원 기록'],
-    [all.reduce((n,s)=>n+s.open,0),'미완료 액션 아이템','#e6a817'],
-    [all.reduce((n,s)=>n+s.need,0),NEED_LABEL,'#c62828']
+    [all.reduce((n,s)=>n+s.open,0),'미완료 액션 아이템','#e6a817']
   ]);
   document.getElementById('records-area').innerHTML=`<div class="team-grid">${all.map(s=>`
     <div class="team-card" onclick="openTeam('${s.team}')">
@@ -1384,7 +1380,7 @@ function renderTeams(){
 function renderTeam(team){
   const s=teamStats(team);
   setHeader(team,`${s.ms.length}명${s.lRows.length?' · 육아휴직 '+s.lRows.length+'명':''} · 누적 원온원 ${s.total}회`,false);
-  statCards([[s.ms.length,'재직 팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.need,NEED_LABEL,'#c62828'],[s.avgMood||'—','최근 평균 컨디션 (5점)']]);
+  statCards([[s.ms.length,'재직 팀원'],[s.total,'누적 원온원 기록'],[s.open,'미완료 액션 아이템','#e6a817'],[s.avgMood||'—','최근 평균 컨디션 (5점)']]);
   const tagCnt={};
   [...s.rows,...s.lRows,...s.fRows].forEach(x=>x.rs.forEach(r=>(r.tags||[]).forEach(t=>tagCnt[t]=(tagCnt[t]||0)+1)));
   const tags=Object.entries(tagCnt).sort((a,b)=>b[1]-a[1]);
