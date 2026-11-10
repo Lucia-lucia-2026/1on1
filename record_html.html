@@ -1296,22 +1296,12 @@ function renderDash(){
       <button class="btn btn-primary btn-sm" onclick='startRecordFor(${JSON.stringify(x.name)},${JSON.stringify(x.dt)},${JSON.stringify(x.method)},${JSON.stringify(x.id)})'>기록 시작</button>
     </div>`;
   }).join('');
-  // 원온원 간격 (재직자만 · 오래된 순, 기록 없는 사람은 맨 뒤)
-  const gap=rows.filter(x=>x.days!==null).sort((a,b)=>b.days-a.days).concat(rows.filter(x=>x.days===null));
-  const LIMIT=10;
-  const gapHTML=gap.slice(0,LIMIT).map(x=>`<div class="list-row click" onclick='selectMember(${JSON.stringify(x.m.name)})'>
-      <div class="member-avatar" style="background:${avatarColor(x.m.name)}">${esc(x.m.name[0])}</div>
-      <div class="lr-main"><div class="lr-name">${esc(x.m.name)} <span style="font-weight:400;color:#aaa;font-size:12px;">${esc(x.m.team)} · ${esc(x.m.role)}</span></div>
-        <div class="lr-sub">${x.last?'마지막 '+ymd(x.last.datetime)+' · 총 '+x.rs.length+'회':'아직 기록이 없어요'}</div></div>
-      ${gapPill(x)}</div>`).join('');
   // 기한이 가까운 액션 (기한 있는 것 우선)
   const dueKey=x=>x.a.due?new Date(x.a.due+'T00:00').getTime():Infinity;
   const soon=openActs.slice().sort((a,b)=>dueKey(a)-dueKey(b)||new Date(b.r.datetime)-new Date(a.r.datetime)).slice(0,5);
   document.getElementById('records-area').innerHTML=`
     <div class="sec-title" style="margin-top:4px">📅 예정된 원온원 <small>일정 수집·확정 페이지와 연동${newCiN?' · <b style="color:#e8590c">새 체크인·수정 '+newCiN+'건</b>':''} · <a href="admin_html.html" target="_blank" style="color:#2D7CD2;">일정 수집 관리 열기</a></small></div>
     <div class="list-card">${schedHTML}</div>
-    <div class="sec-title">⏰ 원온원 간격 <small>재직자 · 오래된 순${gap.length>LIMIT?' · 상위 '+LIMIT+'명 (전체는 팀 현황에서)':''}</small></div>
-    <div class="list-card">${gapHTML||'<div class="empty-state" style="padding:1.5rem 1rem"><p>재직 팀원이 없어요</p></div>'}</div>
     ${lowMood.length?`<div class="sec-title">💛 컨디션을 살펴보세요 <small>최근 기록의 컨디션이 낮았던 재직자 · 관리자만 보여요</small></div>
     <div class="list-card">${lowMood.map(o=>`<div class="list-row click" onclick='selectMember(${JSON.stringify(o.x.m.name)})'>
       <div class="member-avatar" style="background:${avatarColor(o.x.m.name)}">${esc(o.x.m.name[0])}</div>
