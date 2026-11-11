@@ -703,7 +703,7 @@ async function loadSlackDirectory(){
 }
 
 // ── 팀원 셀프 체크인 (설문 서버에서 읽어옴) ──
-let reminders=[], checkins=[], boxSid=null, curCheckinSid='', pendingSid=null, ciOpenSid=null;
+let reminders=[], checkins=[], boxSid=null, curCheckinSid='', pendingSid=null, ciOpenSid=null, curScheduleId='';
 const CI_MOODS=['힘들어요','조금 지쳐요','보통','괜찮아요','좋아요'];
 async function loadCheckins(){
   const res=await surveyApi({action:'listCheckins'});
@@ -1258,9 +1258,18 @@ function dayDiff(dt){
   const t=new Date();t.setHours(0,0,0,0);
   return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t)/86400000);
 }
-function hasRecordOnDay(name,dt){
+// 이 확정 일정에 대한 기록이 있는지: ① 기록 시작으로 연결된 일정 번호가 같거나 ② 같은 팀원의 같은 날 기록
+// ③ (이미 지난 일정만) 일정일 2일 전 이후에 그 팀원의 기록이 있으면 일시를 조금 다르게 적었더라도 기록한 것으로 봄
+function hasRecordOnDay(name,dt,sid,past){
   const day=String(dt).slice(0,10);
-  return allRecords.some(r=>String(r.name||'').trim()===name&&String(r.datetime||'').slice(0,10)===day);
+  const d0=new Date(day+'T00:00');d0.setDate(d0.getDate()-2);
+  const from=isNaN(d0)?day:d0.getFullYear()+'-'+('0'+(d0.getMonth()+1)).slice(-2)+'-'+('0'+d0.getDate()).slice(-2);
+  return allRecords.some(r=>{
+    if(String(r.name||'').trim()!==name)return false;
+    if(sid&&r.scheduleId&&String(r.scheduleId)===String(sid))return true;
+    const rd=String(r.datetime||'').slice(0,10);
+    return rd===day||(past&&rd>=from);
+  });
 }
 // 확정된 일정에서 바로 기록 작성 (팀원·일시·방식 자동 입력)
 function startRecordFor(name,dt,method,sid){
@@ -1284,8 +1293,8 @@ function renderDash(){
   const openActs=[];
   allRecords.forEach(r=>{if(isInactiveName(r.name))return;getActions(r).forEach((a,i)=>{if(!a.done)openActs.push({r,a,i});});});
   // 예정된 원온원 + 기록이 아직 없는 지난 일정(최근 14일)
-  const sched=scheduleList.map(x=>({...x,n:dayDiff(x.dt),rec:hasRecordOnDay(x.name,x.dt)}))
-    .filter(x=>x.n!==null&&((x.n>=0)||(x.n<0&&x.n>=-14&&!x.rec)))
+  const sched=scheduleList.map(x=>{const n=dayDiff(x.dt);return {...x,n,rec:n!==null&&hasRecordOnDay(x.name,x.dt,x.id,n<0)};})
+    .filter(x=>x.n!==null&&!x.rec&&(x.n>=0||x.n>=-14))
     .sort((a,b)=>new Date(a.dt)-new Date(b.dt));
   const upcomingN=sched.filter(x=>x.n>=0).length;
   const newCiN=checkins.filter(ciIsNew).length;
@@ -1508,6 +1517,7 @@ function openRecordModal(id){
   const acts=cur?getActions(cur):[];
   if(acts.length)acts.forEach(a=>addActionRow(a));else addActionRow();
   curTags=cur&&Array.isArray(cur.tags)?[...cur.tags]:[];
+  curScheduleId=cur?(cur.scheduleId||''):(pendingSid||'');   // 확정 일정에서 '기록 시작'으로 연 경우 그 일정과 기록을 연결
   boxSid=cur?(cur.checkinSid||null):pendingSid;pendingSid=null;
   renderTagPick();
   document.getElementById('f-tag-new').value='';
@@ -1543,7 +1553,8 @@ async function saveRecord(){
     tags:[...curTags],
     tpl:curTpl,
     mood:curMood,
-    checkinSid:curCheckinSid||(prevRec&&prevRec.checkinSid)||'',   // 이 기록과 연결된 팀원 체크인
+    checkinSid:curCheckinSid||(prevRec&&prevRec.checkinSid)||'',
+    scheduleId:curScheduleId||(prevRec&&prevRec.scheduleId)||'',   // 대시보드 '예정된 원온원'에서 이 일정을 기록 완료로 처리하기 위한 연결   // 이 기록과 연결된 팀원 체크인
     note:document.getElementById('f-note').value.trim(),
     updatedAt:new Date().toLocaleString('ko-KR')
   };
