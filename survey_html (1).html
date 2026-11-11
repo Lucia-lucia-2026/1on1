@@ -63,6 +63,7 @@
   .time-chip input{display:none;}
   .time-chip span{display:block;padding:9px 0;font-size:13px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;color:#555;background:#fafafa;text-align:center;transition:all 0.15s;user-select:none;}
   .time-chip input:checked + span{background:#7f77dd;border-color:#7f77dd;color:#fff;}
+  .time-chip.wide{grid-column:1/-1;}
 
   .submit-btn{width:100%;padding:15px;font-size:15px;font-weight:700;border:none;border-radius:14px;background:#7f77dd;color:#fff;cursor:pointer;transition:opacity 0.15s;letter-spacing:0.3px;}
   .submit-btn:hover{opacity:0.88;}
@@ -190,6 +191,7 @@ function apiCall(params) {
     document.head.appendChild(s);
   });
 }
+const LUNCH_LABEL = '점심식사 겸 미팅';
 const TIMES = ['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'];
 const DAY_KO = ['일','월','화','수','목','금','토'];
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -286,6 +288,11 @@ function initTimeGrid() {
     lbl.innerHTML = `<input type="checkbox" name="time" value="${t}"><span>${t}</span>`;
     g.appendChild(lbl);
   });
+  // 점심식사 겸 미팅: 시각 칩 아래 한 줄 전체로 표시 (값은 그대로 저장되어 관리자 화면에 태그로 보임)
+  const lunch = document.createElement('label');
+  lunch.className = 'time-chip wide';
+  lunch.innerHTML = `<input type="checkbox" name="time" value="${LUNCH_LABEL}"><span>🍱 ${LUNCH_LABEL}</span>`;
+  g.appendChild(lunch);
 }
 
 function getChecked(name) {
